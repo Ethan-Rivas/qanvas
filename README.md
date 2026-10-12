@@ -23,9 +23,10 @@ Nothing is uploaded: the circuit is simulated on your own computer, and a share 
 - **Build circuits** with up to 12 qubits: H, X, Y, Z, S, S†, T, T†, Rx, Ry, Rz and P with any angle, CNOT, CZ, SWAP, Toffoli and measurement. Drag from the palette, move, copy, delete, undo and redo.
 - **See the results live:** the probability of each outcome, the amplitudes, and one Bloch sphere per qubit, whose arrow shrinks when the qubit is entangled.
 - **Step through the circuit** with the slider. In Learn mode, a short explanation at each step says what the gate did, with the state before and after.
-- **Copy code** in Qiskit, Cirq, pyQuil or OpenQASM 2.0, with the line for the current step highlighted.
+- **Copy or download code** in Qiskit, Cirq, pyQuil or OpenQASM 2.0, with the line for the current step highlighted. Downloads include a ready-to-run notebook or Python script that runs the circuit and counts the outcomes.
+- **Edit the OpenQASM code** directly: the circuit updates when you pause typing, and keeps its last valid version while the code has a mistake.
 - **Start from an example:** Bell state, GHZ, superdense coding, quantum teleportation, Deutsch–Jozsa and Grover search, each with a "Try this" challenge.
-- **Share** a link or save a file, and **open** a file or OpenQASM 2.0 code.
+- **Share** a link or save a file, and **open** a file, OpenQASM 2.0 code or a link from Quirk or Quirk-E.
 
 Everything works with the keyboard too: focus a gate, press **Space** to pick it up, move with the **arrow keys** and press **Space** to drop it. **Ctrl/⌘ + Z** undoes, **Ctrl/⌘ + C** and **V** copy and paste, and **Delete** removes the selected gate.
 
@@ -33,7 +34,7 @@ Qanvas writes kets with q0 first (leftmost), like Cirq and Quirk. Qiskit writes 
 
 ## Run it in quantum-lab
 
-In [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab), `docker compose up` starts Qanvas next to JupyterLab at **http://127.0.0.1:8080**. Build a circuit, copy the code and paste it into a notebook. [docs/quantum-lab.md](docs/quantum-lab.md) describes how it's set up there.
+In [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab), `docker compose up` starts Qanvas next to JupyterLab at **http://127.0.0.1:8080**. Build a circuit, then download it as a notebook and open it in JupyterLab, or copy the code into a notebook of your own. [docs/quantum-lab.md](docs/quantum-lab.md) describes how it's set up there.
 
 To run only Qanvas with Docker:
 
@@ -59,7 +60,7 @@ Then open **http://localhost:5173**. Offline mode only works in a built copy: `n
 Every result Qanvas shows is checked against Qiskit, so you can trust it.
 
 - **Simulator:** `reference/generate.py` builds test circuits in Qiskit (every gate on each qubit position, every example, and 200 random circuits from 1 to 12 qubits) and saves their exact final states. Qanvas must match every amplitude within 1e-9. The script runs in the quantum-lab image (`npm run reference`); the reference files are never edited by hand.
-- **Exported code:** `npm run test:export` runs the Qiskit, Cirq, pyQuil and OpenQASM code Qanvas generates for every test circuit, and imports the OpenQASM that Qiskit writes. Every final state must match Qanvas's. This is what catches bit-order mistakes.
+- **Exported code:** `npm run test:export` runs the Qiskit, Cirq, pyQuil and OpenQASM code Qanvas generates for every test circuit, and imports the OpenQASM that Qiskit writes. Every final state must match Qanvas's. This is what catches bit-order mistakes. It also runs the downloadable notebooks and scripts, whose counts must agree with Qanvas's probabilities.
 - **Interface:** browser tests cover dragging with the mouse and the keyboard, stepping through, sharing, importing, offline use, phone screens and automated accessibility checks.
 
 ## Development

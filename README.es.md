@@ -23,9 +23,10 @@ No se sube nada: el circuito se simula en tu propia computadora, y un enlace par
 - **Armar circuitos** de hasta 12 qubits: H, X, Y, Z, S, S†, T, T†, Rx, Ry, Rz y P con cualquier ángulo, CNOT, CZ, SWAP, Toffoli y medición. Arrastra desde la paleta, mueve, copia, borra, deshaz y rehaz.
 - **Ver los resultados en vivo:** la probabilidad de cada resultado, las amplitudes y una esfera de Bloch por qubit, cuya flecha se acorta cuando el qubit está entrelazado.
 - **Recorrer el circuito paso a paso** con el control deslizante. En el modo aprendizaje, una explicación corta en cada paso dice qué hizo la compuerta, con el estado de antes y de después.
-- **Copiar código** en Qiskit, Cirq, pyQuil u OpenQASM 2.0, con la línea del paso actual resaltada.
+- **Copiar o descargar código** en Qiskit, Cirq, pyQuil u OpenQASM 2.0, con la línea del paso actual resaltada. Las descargas incluyen un notebook o un script de Python listo para correr, que ejecuta el circuito y cuenta los resultados.
+- **Editar el código OpenQASM** directamente: el circuito se actualiza cuando dejas de escribir, y conserva su última versión válida mientras el código tenga un error.
 - **Empezar con un ejemplo:** estado de Bell, GHZ, codificación superdensa, teletransportación cuántica, Deutsch–Jozsa y búsqueda de Grover, cada uno con un reto "Inténtalo".
-- **Compartir** un enlace o guardar un archivo, y **abrir** un archivo o código OpenQASM 2.0.
+- **Compartir** un enlace o guardar un archivo, y **abrir** un archivo, código OpenQASM 2.0 o un enlace de Quirk o Quirk-E.
 
 Todo funciona también con el teclado: enfoca una compuerta, presiona **Espacio** para tomarla, muévete con las **flechas** y presiona **Espacio** para soltarla. **Ctrl/⌘ + Z** deshace, **Ctrl/⌘ + C** y **V** copian y pegan, y **Suprimir** borra la compuerta seleccionada.
 
@@ -33,7 +34,7 @@ Qanvas escribe los kets con q0 primero (a la izquierda), como Cirq y Quirk. Qisk
 
 ## Úsalo en quantum-lab
 
-En [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab/blob/main/README.es.md), `docker compose up` abre Qanvas junto a JupyterLab en **http://127.0.0.1:8080**. Arma un circuito, copia el código y pégalo en un notebook. [docs/quantum-lab.md](docs/quantum-lab.md) explica cómo está configurado allá (en inglés).
+En [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab/blob/main/README.es.md), `docker compose up` abre Qanvas junto a JupyterLab en **http://127.0.0.1:8080**. Arma un circuito y descárgalo como notebook para abrirlo en JupyterLab, o copia el código a un notebook tuyo. [docs/quantum-lab.md](docs/quantum-lab.md) explica cómo está configurado allá (en inglés).
 
 Para correr solo Qanvas con Docker:
 
@@ -59,7 +60,7 @@ Luego abre **http://localhost:5173**. El modo sin internet solo funciona en una 
 Cada resultado que muestra Qanvas se compara con Qiskit, para que puedas confiar en él.
 
 - **Simulador:** `reference/generate.py` arma circuitos de prueba en Qiskit (cada compuerta en cada posición de qubit, cada ejemplo y 200 circuitos aleatorios de 1 a 12 qubits) y guarda sus estados finales exactos. Qanvas debe coincidir en cada amplitud con un margen de 1e-9. El script corre en la imagen de quantum-lab (`npm run reference`); los archivos de referencia nunca se editan a mano.
-- **Código exportado:** `npm run test:export` corre el código de Qiskit, Cirq, pyQuil y OpenQASM que genera Qanvas para cada circuito de prueba, e importa el OpenQASM que escribe Qiskit. Cada estado final debe coincidir con el de Qanvas. Así se detectan los errores de orden de bits.
+- **Código exportado:** `npm run test:export` corre el código de Qiskit, Cirq, pyQuil y OpenQASM que genera Qanvas para cada circuito de prueba, e importa el OpenQASM que escribe Qiskit. Cada estado final debe coincidir con el de Qanvas. Así se detectan los errores de orden de bits. También corre los notebooks y scripts que se pueden descargar, cuyos conteos deben coincidir con las probabilidades de Qanvas.
 - **Interfaz:** las pruebas en el navegador cubren arrastrar con el mouse y con el teclado, el recorrido paso a paso, compartir, importar, el uso sin internet, pantallas de celular y revisiones automáticas de accesibilidad.
 
 ## Desarrollo
