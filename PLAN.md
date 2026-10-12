@@ -165,11 +165,12 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 
 - **Editable OpenQASM tab:** type OpenQASM 2.0 and the circuit, results and code update after a short pause. The other three tabs stay read-only.
 - **Import Quirk links:** paste a Quirk URL and get the same circuit, for the gates Qanvas has.
-- **Open in notebook** (in quantum-lab): one button saves the circuit as a ready-to-run notebook in the lab's `notebooks/` folder and opens it in JupyterLab.
+- **Download as:** save the circuit as a ready-to-run notebook (`.ipynb`), a Python script (`.py`) or OpenQASM (`.qasm`), in Qiskit, Cirq or pyQuil. Works on the website too.
+- **Open in notebook** (in quantum-lab): the same notebook, saved straight into the lab's `notebooks/` folder and opened in JupyterLab.
 - **Run with Qiskit Aer** (in quantum-lab): run circuits with more qubits than the browser can, and get sampled counts.
-- **Import Qiskit code** (in quantum-lab): paste Python that builds a `QuantumCircuit` and get the circuit.
+- **Import Qiskit code** (in quantum-lab): paste a Python snippet that builds a `QuantumCircuit` and get the circuit.
 
-**Out of 0.2:** noise models and mid-circuit measurement (0.3), and importing Cirq or pyQuil code.
+**Out of 0.2:** noise models and mid-circuit measurement (0.3), importing whole notebooks (0.5), and importing Cirq or pyQuil code.
 
 **Technical design:**
 
@@ -181,31 +182,33 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 - **Discovery:** at start, Qanvas asks `./api/health`. If it answers, the lab-only buttons appear; on the website and in plain Docker they don't.
 - **Bit order:** the bridge converts Qiskit's counts to Qanvas's order (q0 first) before replying, with a comment, and its tests check the conversion on circuits where the order matters.
 - **Bigger circuits:** with the bridge, the qubit limit rises from 12 to 24. Aer's state for 24 qubits takes 256 MB, which fits Docker Desktop's default memory; 28 would need 4 GB. Above 12 qubits the browser stops simulating: Aer's sampled counts replace the exact histogram, and the amplitudes, Bloch spheres and step-through explanations aren't shown, with a note saying why.
-- **Notebooks:** Qanvas builds the notebook itself from its Qiskit (or Cirq, or pyQuil) export, plus a cell that runs it and plots the results. The export tests already run that code; the bridge's tests also execute a generated notebook with nbconvert.
+- **Notebooks:** Qanvas builds the notebook in the browser from its Qiskit, Cirq or pyQuil export: a title, the bit-order note for Qiskit, the circuit, and a cell that runs it and plots the results. Download as and Open in notebook use the same file. The export tests run every generated notebook and script in the quantum-lab image (notebooks with nbconvert) and check that their results agree with Qanvas's.
 - **Quirk links:** Quirk's JSON format is read in the browser, mapping its gate names to Qanvas's and stopping with a clear message, as the OpenQASM importer does, at gates Qanvas lacks (such as anti-controls). Quirk's own bit order needs checking against Qanvas's, with a test.
 
 **Milestones:**
 
-1. **Code in:** the editable OpenQASM tab and Quirk link import, in Qanvas only.
-   - **Check:** a circuit typed as OpenQASM or pasted from Quirk shows the same results as one built by hand, and invalid input never breaks the current circuit.
+1. **Code in and out:** the editable OpenQASM tab, Quirk link import and Download as, in Qanvas only.
+   - **Check:** a circuit typed as OpenQASM or pasted from Quirk shows the same results as one built by hand, invalid input never breaks the current circuit, and every downloaded notebook and script runs in the quantum-lab image with results that agree with Qanvas.
 2. **The lab bridge:** the bridge service in quantum-lab, the nginx forwarding and discovery in Qanvas, and Open in notebook.
    - **Check:** in quantum-lab, Open in notebook creates a notebook that runs with Shift + Enter and gives the same results as Qanvas; on the website the button doesn't appear.
 3. **Run with Qiskit Aer and import Qiskit code.**
-   - **Check:** a circuit above 12 qubits runs on Aer with the bit order right, and Qiskit code from the lab's notebooks imports with the same final state.
+   - **Check:** a circuit above 12 qubits runs on Aer with the bit order right, and a Qiskit snippet imports with the same final state.
 
 **Open questions for 0.2:**
 
 - [x] The qubit limit with Aer is 24 for now (decided Oct 12, 2026). Rows get more compact above 12 qubits so the circuit stays readable.
-- [x] Importing Qiskit code works only in quantum-lab, where real Python runs it, so anything that runs in a notebook imports. A browser-side reader for simple code on the website can come later if students ask for it. (Decided Oct 12, 2026.)
+- [x] Importing Qiskit code works only in quantum-lab, where real Python runs it, so any snippet that runs in a notebook imports. A browser-side reader for simple code on the website can come later if students ask for it. (Decided Oct 12, 2026.)
 - [ ] What the 0.1 reviews and feedback from students change about this list.
 
 ## After 0.1, and open questions
 
 **Later versions, roughly in order:**
 
+- **0.1.x:** fixes from the physics and Spanish reviews and from student feedback, as small patch releases.
 - **0.2:** see the 0.2 plan above.
-- **0.3:** noise models (depolarizing, readout error) with a side-by-side ideal vs noisy view; mid-circuit measurement.
+- **0.3:** noise models (depolarizing, readout error) with a side-by-side ideal vs noisy view; mid-circuit measurement and classical control.
 - **0.4:** custom gates and subcircuits; lesson paths that chain several examples.
+- **0.5:** import real notebooks. In quantum-lab, a Qiskit notebook runs in a separate process with a time limit and a warning first (it runs the notebook's own code), and you pick one of the circuits it builds. Qiskit rewrites gates Qanvas lacks into ones it has; more than 24 qubits or unbound parameters get a clear message. Circuits with hundreds of steps get a compact view, a slider that still works and a performance check at that size. It comes after 0.3 and 0.4 because real notebooks often use mid-circuit measurement, and long rewritten circuits need subcircuits to stay readable.
 - **Later:** run on real IBM hardware through quantum-lab; a native desktop app if the installable web app isn't enough; collaboration.
 
 **Open questions:**
