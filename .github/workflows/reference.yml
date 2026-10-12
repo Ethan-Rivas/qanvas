@@ -1,0 +1,30 @@
+name: Qiskit references
+
+# Regenerates the reference states with the quantum-lab image whenever the test
+# circuits or the script change, then checks the simulator against the fresh ones.
+on:
+  push:
+    branches: [main]
+    paths: [reference/**, src/examples/**, src/sim/**, scripts/reference.sh]
+  pull_request:
+    paths: [reference/**, src/examples/**, src/sim/**, scripts/reference.sh]
+  workflow_dispatch:
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run reference
+      - name: Report changes to the committed references
+        run: git diff --stat -- reference/data
+      - run: npm test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reference-data
+          path: reference/data
