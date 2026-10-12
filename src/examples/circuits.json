@@ -1,0 +1,67 @@
+{
+  "bell": {
+    "qubits": 2,
+    "columns": [
+      [{ "gate": "H", "targets": [0] }],
+      [{ "gate": "X", "controls": [0], "targets": [1] }],
+      [{ "gate": "M", "targets": [0, 1] }]
+    ]
+  },
+  "ghz": {
+    "qubits": 3,
+    "columns": [
+      [{ "gate": "H", "targets": [0] }],
+      [{ "gate": "X", "controls": [0], "targets": [1] }],
+      [{ "gate": "X", "controls": [1], "targets": [2] }],
+      [{ "gate": "M", "targets": [0, 1, 2] }]
+    ]
+  },
+  "superdense-coding": {
+    "qubits": 2,
+    "columns": [
+      [{ "gate": "H", "targets": [0] }],
+      [{ "gate": "X", "controls": [0], "targets": [1] }],
+      [{ "gate": "X", "targets": [0] }],
+      [{ "gate": "Z", "targets": [0] }],
+      [{ "gate": "X", "controls": [0], "targets": [1] }],
+      [{ "gate": "H", "targets": [0] }],
+      [{ "gate": "M", "targets": [0, 1] }]
+    ]
+  },
+  "teleportation": {
+    "qubits": 3,
+    "columns": [
+      [{ "gate": "RY", "targets": [0], "angle": 1.1 }, { "gate": "H", "targets": [1] }],
+      [{ "gate": "X", "controls": [1], "targets": [2] }],
+      [{ "gate": "X", "controls": [0], "targets": [1] }],
+      [{ "gate": "H", "targets": [0] }],
+      [{ "gate": "X", "controls": [1], "targets": [2] }],
+      [{ "gate": "Z", "controls": [0], "targets": [2] }],
+      [{ "gate": "M", "targets": [0, 1, 2] }]
+    ]
+  },
+  "deutsch-jozsa": {
+    "qubits": 3,
+    "columns": [
+      [{ "gate": "X", "targets": [2] }],
+      [{ "gate": "H", "targets": [0] }, { "gate": "H", "targets": [1] }, { "gate": "H", "targets": [2] }],
+      [{ "gate": "X", "controls": [0], "targets": [2] }],
+      [{ "gate": "X", "controls": [1], "targets": [2] }],
+      [{ "gate": "H", "targets": [0] }, { "gate": "H", "targets": [1] }],
+      [{ "gate": "M", "targets": [0, 1] }]
+    ]
+  },
+  "grover-2": {
+    "qubits": 2,
+    "columns": [
+      [{ "gate": "H", "targets": [0] }, { "gate": "H", "targets": [1] }],
+      [{ "gate": "Z", "controls": [0], "targets": [1] }],
+      [{ "gate": "H", "targets": [0] }, { "gate": "H", "targets": [1] }],
+      [{ "gate": "X", "targets": [0] }, { "gate": "X", "targets": [1] }],
+      [{ "gate": "Z", "controls": [0], "targets": [1] }],
+      [{ "gate": "X", "targets": [0] }, { "gate": "X", "targets": [1] }],
+      [{ "gate": "H", "targets": [0] }, { "gate": "H", "targets": [1] }],
+      [{ "gate": "M", "targets": [0, 1] }]
+    ]
+  }
+}
