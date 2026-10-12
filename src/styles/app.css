@@ -152,9 +152,19 @@ button:disabled {
   border-color: var(--ink-muted);
 }
 
+/* Looks compact, but the invisible ::after keeps the touch target at 44 px. */
 .button--small {
-  font-size: 13px;
+  position: relative;
+  min-height: 32px;
   padding: 0 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.button--small::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
 }
 
 .learn-toggle {
@@ -940,8 +950,50 @@ button:disabled {
 /* Code */
 
 .code-panel {
+  position: relative;
   background: var(--surface);
   border-top: 1px solid var(--border);
+}
+
+.code-resize {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  top: -8px;
+  height: 8px;
+  display: flex;
+  justify-content: center;
+  cursor: row-resize;
+  touch-action: none;
+  outline: none;
+}
+
+/* A taller invisible strip above the border keeps the handle easy to grab without covering the tabs. */
+.code-resize::before {
+  content: '';
+  position: absolute;
+  inset: -36px 0 0;
+}
+
+.code-resize::after {
+  content: '';
+  width: 36px;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.code-resize:hover::after,
+.code-resize:focus-visible::after {
+  width: 48px;
+  background: var(--brand);
+}
+
+.code-resize:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
 }
 
 .code-toolbar {

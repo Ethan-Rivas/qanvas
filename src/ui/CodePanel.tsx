@@ -1,9 +1,38 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { CODE_FORMATS, codeText, generateCode, type CodeFormat } from '../code/generate';
 import { currentStep, useEditor } from '../editor/store';
 import { useT } from '../i18n/useT';
 
 const FORMAT_KEY = 'qanvas.codeFormat';
+const HEIGHT_KEY = 'qanvas.codeHeight';
+const MIN_HEIGHT = 96;
+const KEY_STEP = 24;
+
+function maxHeight() {
+  return Math.round(window.innerHeight * 0.7);
+}
+
+function clampHeight(height: number) {
+  return Math.round(Math.min(maxHeight(), Math.max(MIN_HEIGHT, height)));
+}
+
+function initialHeight(): number | null {
+  try {
+    const saved = Number(localStorage.getItem(HEIGHT_KEY));
+    return saved > 0 ? clampHeight(saved) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveHeight(height: number | null) {
+  try {
+    if (height === null) localStorage.removeItem(HEIGHT_KEY);
+    else localStorage.setItem(HEIGHT_KEY, String(height));
+  } catch {
+    // Not remembering the size is fine.
+  }
+}
 
 const TOKENS = /(#.*$|\/\/.*$)|("[^"]*")|\b(from|import|OPENQASM|include|qreg|creg|gate|measure)\b|(\b\d+(?:\.\d+)?(?:e[-+]?\d+)?\b)/g;
 const TOKEN_CLASSES = ['code-comment', 'code-string', 'code-keyword', 'code-number'];
@@ -44,6 +73,41 @@ export function CodePanel() {
   const [copyStatus, setCopyStatus] = useState<'copied' | 'failed' | null>(null);
   const tabs = useRef<Record<string, HTMLButtonElement | null>>({});
   const view = useRef<HTMLDivElement>(null);
+  // null keeps the code box sized to its content, up to the default maximum.
+  const [height, setHeight] = useState(initialHeight);
+  const drag = useRef<{ startY: number; startHeight: number } | null>(null);
+
+  function resize(next: number | null) {
+    setHeight(next);
+    saveHeight(next);
+  }
+
+  function onHandleDown(event: PointerEvent<HTMLDivElement>) {
+    if (!view.current) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = { startY: event.clientY, startHeight: view.current.offsetHeight };
+  }
+
+  function onHandleMove(event: PointerEvent<HTMLDivElement>) {
+    if (!drag.current) return;
+    // Dragging the top edge up makes the code box taller.
+    setHeight(clampHeight(drag.current.startHeight + drag.current.startY - event.clientY));
+  }
+
+  function onHandleUp() {
+    if (!drag.current) return;
+    drag.current = null;
+    if (view.current) saveHeight(view.current.offsetHeight);
+  }
+
+  function onHandleKey(event: KeyboardEvent) {
+    const current = view.current?.offsetHeight ?? MIN_HEIGHT;
+    const next = ({ ArrowUp: current + KEY_STEP, ArrowDown: current - KEY_STEP, Home: maxHeight(), End: MIN_HEIGHT } as Record<string, number>)[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    resize(clampHeight(next));
+  }
   const lines = useMemo(() => generateCode(format, circuit, t), [format, circuit, t]);
   const firstCurrent = showCurrent && step > 0 ? lines.findIndex((line) => line.column === step - 1) : -1;
 
@@ -93,6 +157,23 @@ export function CodePanel() {
 
   return (
     <section className="code-panel" aria-label={t('code.label')}>
+      <div
+        className="code-resize"
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label={t('code.resize')}
+        aria-controls="code-view"
+        aria-valuemin={MIN_HEIGHT}
+        aria-valuemax={maxHeight()}
+        aria-valuenow={height ?? view.current?.offsetHeight ?? MIN_HEIGHT}
+        tabIndex={0}
+        onPointerDown={onHandleDown}
+        onPointerMove={onHandleMove}
+        onPointerUp={onHandleUp}
+        onPointerCancel={onHandleUp}
+        onKeyDown={onHandleKey}
+        onDoubleClick={() => resize(null)}
+      />
       <div className="code-toolbar">
         <div role="tablist" aria-label={t('code.formats')} className="code-tabs">
           {CODE_FORMATS.map((f) => (
@@ -123,7 +204,7 @@ export function CodePanel() {
           {t('code.copy')}
         </button>
       </div>
-      <div ref={view} id="code-view" role="tabpanel" aria-labelledby={`code-tab-${format}`} tabIndex={0} className="code-view">
+      <div ref={view} id="code-view" role="tabpanel" aria-labelledby={`code-tab-${format}`} tabIndex={0} className="code-view" style={height === null ? undefined : { height, maxHeight: 'none' }}>
         <pre>
           <code>
             {lines.map((line, k) => {

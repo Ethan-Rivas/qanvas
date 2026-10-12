@@ -98,6 +98,18 @@ test('steps through a circuit with explanations and the matching code line', asy
   await expect(page.getByRole('status').filter({ hasText: 'Copied' })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('cirq.Moment(cirq.CNOT(q[0], q[1])),');
 
+  const codeView = page.locator('#code-view');
+  const before = (await codeView.boundingBox())!.height;
+  await page.getByRole('separator', { name: 'Resize the code panel' }).press('ArrowUp');
+  const height = async () => (await codeView.boundingBox())!.height;
+  await expect.poll(async () => Math.abs((await height()) - (before + 24))).toBeLessThan(1);
+  const handle = (await page.getByRole('separator').boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2 - 100, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(async () => Math.abs((await height()) - (before + 124))).toBeLessThan(1);
+
   await page.getByRole('switch', { name: 'Learn mode' }).uncheck();
   await expect(page.locator('.callout')).toHaveCount(0);
 });

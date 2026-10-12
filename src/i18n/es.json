@@ -159,5 +159,6 @@
   "code.copy": "Copiar",
   "code.copied": "Copiado",
   "code.copyFailed": "No se pudo copiar",
-  "code.stepTag": "← paso {step}"
+  "code.stepTag": "← paso {step}",
+  "code.resize": "Cambia el tamaño del panel de código"
 }
