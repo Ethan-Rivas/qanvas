@@ -196,7 +196,7 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 **Open questions for 0.2:**
 
 - [ ] The qubit limit with Aer, and how the editor should look with that many wires.
-- [ ] Whether importing Qiskit code should also work on the website, with a browser-side reader for simple code like `qc.h(0)`, or only in quantum-lab, where real Python runs it.
+- [x] Importing Qiskit code works only in quantum-lab, where real Python runs it, so anything that runs in a notebook imports. A browser-side reader for simple code on the website can come later if students ask for it. (Decided Oct 12, 2026.)
 - [ ] What the 0.1 reviews and feedback from students change about this list.
 
 ## After 0.1, and open questions
