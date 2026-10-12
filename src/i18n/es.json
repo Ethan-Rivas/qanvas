@@ -82,5 +82,6 @@
   "notice.dismiss": "Cerrar",
   "circuit.selected": "Seleccionada: {gate}",
   "language.en": "English",
-  "language.es": "Español"
+  "language.es": "Español",
+  "code.qiskitBitOrder": "Qiskit muestra los resultados con q0 como el bit de la derecha; Qanvas muestra q0 primero."
 }
