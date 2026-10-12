@@ -8,6 +8,8 @@
 
 [Read in English](README.md)
 
+![Qanvas mostrando un estado GHZ en el paso 2: la columna de la CNOT está resaltada, una explicación dice que q0 y q1 ahora están entrelazados, el histograma muestra 000 y 110 con 50 % cada uno, y la línea de Qiskit correspondiente está resaltada en el panel de código.](docs/images/qanvas-es.png)
+
 Las herramientas visuales que los estudiantes conocen primero suelen verse anticuadas, y las más pulidas piden una cuenta y conexión. Qanvas está pensado primero para estudiantes y después para investigadores: sin cuenta, sin instalar nada, funciona sin internet, en español y en inglés. Es el constructor de circuitos de [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab), y también funciona por su cuenta.
 
 ## Pruébalo

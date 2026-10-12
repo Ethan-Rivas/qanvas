@@ -8,6 +8,8 @@
 
 [Leer en español](README.es.md)
 
+![Qanvas showing a GHZ state at step 2: the CNOT column is highlighted, an explanation says q0 and q1 are now entangled, the histogram shows 000 and 110 at 50% each, and the matching Qiskit line is highlighted in the code panel.](docs/images/qanvas-en.png)
+
 The visual tools students meet first tend to look and feel dated, and the polished ones need an account and a connection. Qanvas is built for students first and researchers second: no account, no install, works offline, in English and Spanish. It's the circuit builder of [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab), and it also runs on its own.
 
 ## Try it
