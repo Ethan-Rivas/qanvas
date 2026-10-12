@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerE
 import { CODE_FORMATS, codeText, generateCode, type CodeFormat } from '../code/generate';
 import { currentStep, useEditor } from '../editor/store';
 import { useT } from '../i18n/useT';
+import { DownloadDialog } from './DownloadDialog';
 
 const FORMAT_KEY = 'qanvas.codeFormat';
 const HEIGHT_KEY = 'qanvas.codeHeight';
@@ -70,6 +71,7 @@ export function CodePanel() {
   const step = useEditor(currentStep);
   const showCurrent = useEditor((s) => s.learnMode || s.step !== null);
   const [format, setFormat] = useState(initialFormat);
+  const [downloading, setDownloading] = useState(false);
   const [copyStatus, setCopyStatus] = useState<'copied' | 'failed' | null>(null);
   const tabs = useRef<Record<string, HTMLButtonElement | null>>({});
   const view = useRef<HTMLDivElement>(null);
@@ -203,6 +205,9 @@ export function CodePanel() {
         <button type="button" className="button button--small" onClick={copy}>
           {t('code.copy')}
         </button>
+        <button type="button" className="button button--small" onClick={() => setDownloading(true)}>
+          {t('download.button')}
+        </button>
       </div>
       <div ref={view} id="code-view" role="tabpanel" aria-labelledby={`code-tab-${format}`} tabIndex={0} className="code-view" style={height === null ? undefined : { height, maxHeight: 'none' }}>
         <pre>
@@ -220,6 +225,7 @@ export function CodePanel() {
           </code>
         </pre>
       </div>
+      <DownloadDialog open={downloading} onClose={() => setDownloading(false)} format={format} />
     </section>
   );
 }

@@ -3,6 +3,7 @@ import { useEditor } from '../editor/store';
 import { useT } from '../i18n/useT';
 import { encodeLink, toFile } from '../share/share';
 import { Dialog } from './Dialog';
+import { saveFile } from './saveFile';
 
 function current() {
   const { circuit, exampleId } = useEditor.getState();
@@ -30,12 +31,7 @@ export function ShareDialog({ open, onClose }: { open: boolean; onClose: () => v
 
   function download() {
     const shared = current();
-    const url = URL.createObjectURL(new Blob([toFile(shared)], { type: 'application/json' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${shared.exampleId ?? 'circuit'}.qanvas.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    saveFile(`${shared.exampleId ?? 'circuit'}.qanvas.json`, toFile(shared), 'application/json');
   }
 
   return (

@@ -223,5 +223,22 @@
   "a11y.on": "{gate} on {qubits}",
   "a11y.controlled.one": "{gate}, control {controls}, target {target}",
   "a11y.controlled.other": "{gate}, controls {controls}, target {target}",
-  "app.description": "Build quantum circuits by dragging gates, see the results live, step through them with explanations and copy working code."
+  "app.description": "Build quantum circuits by dragging gates, see the results live, step through them with explanations and copy working code.",
+  "download.button": "Download",
+  "download.title": "Download",
+  "download.intro": "Save the circuit as a notebook or a script that runs it and counts the outcomes, or as OpenQASM.",
+  "download.framework": "Framework",
+  "download.notebook": "Notebook (.ipynb)",
+  "download.script": "Python script (.py)",
+  "download.qasmTitle": "OpenQASM",
+  "download.qasmHint": "Just the circuit, in a format most quantum tools can open.",
+  "download.qasm": "OpenQASM (.qasm)",
+  "download.untitled": "Qanvas circuit",
+  "download.notebookIntro": "Made with [Qanvas](https://ethan-rivas.github.io/qanvas/), in {framework}. Run each cell with Shift + Enter.",
+  "download.runIntro": "Run the circuit {shots} times and count each outcome. Outcomes list the measured qubits with q0 first, like Qanvas.",
+  "download.measureAll": "The circuit has no measurements, so every qubit is measured.",
+  "download.qiskitReverse": "Qiskit puts classical bit 0 last in its bitstrings; reversing them puts q0 first, like Qanvas.",
+  "download.pyqvm": "pyQuil's built-in simulator. In quantum-lab, \"{qubits}q-qvm\" uses the lab's QVM instead.",
+  "download.outcome": "Outcome (q0 first)",
+  "download.count": "Count"
 }

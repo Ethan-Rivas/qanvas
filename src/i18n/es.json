@@ -223,5 +223,22 @@
   "a11y.on": "{gate} en {qubits}",
   "a11y.controlled.one": "{gate}, control {controls}, objetivo {target}",
   "a11y.controlled.other": "{gate}, controles {controls}, objetivo {target}",
-  "app.description": "Arma circuitos cuánticos arrastrando compuertas, ve los resultados en vivo, recórrelos paso a paso con explicaciones y copia código que funciona."
+  "app.description": "Arma circuitos cuánticos arrastrando compuertas, ve los resultados en vivo, recórrelos paso a paso con explicaciones y copia código que funciona.",
+  "download.button": "Descargar",
+  "download.title": "Descargar",
+  "download.intro": "Guarda el circuito como un notebook o un script que lo corre y cuenta los resultados, o como OpenQASM.",
+  "download.framework": "Framework",
+  "download.notebook": "Notebook (.ipynb)",
+  "download.script": "Script de Python (.py)",
+  "download.qasmTitle": "OpenQASM",
+  "download.qasmHint": "Solo el circuito, en un formato que abren casi todas las herramientas cuánticas.",
+  "download.qasm": "OpenQASM (.qasm)",
+  "download.untitled": "Circuito de Qanvas",
+  "download.notebookIntro": "Hecho con [Qanvas](https://ethan-rivas.github.io/qanvas/), en {framework}. Corre cada celda con Shift + Enter.",
+  "download.runIntro": "Corre el circuito {shots} veces y cuenta cada resultado. Los resultados listan los qubits medidos con q0 primero, como en Qanvas.",
+  "download.measureAll": "El circuito no tiene mediciones, así que se miden todos los qubits.",
+  "download.qiskitReverse": "Qiskit pone el bit clásico 0 al final de sus cadenas de bits; al invertirlas, q0 queda primero, como en Qanvas.",
+  "download.pyqvm": "El simulador incluido en pyQuil. En quantum-lab, \"{qubits}q-qvm\" usa la QVM del laboratorio.",
+  "download.outcome": "Resultado (q0 primero)",
+  "download.count": "Conteo"
 }

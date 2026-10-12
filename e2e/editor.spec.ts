@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 async function drag(page: Page, from: Locator, to: Locator) {
   const a = (await from.boundingBox())!;
@@ -153,6 +154,25 @@ test('imports OpenQASM and explains what it cannot read', async ({ page }) => {
   await expect(outcome(page, '|11⟩: 50%')).toBeVisible();
 });
 
+test('downloads the circuit as a notebook, a script or OpenQASM', async ({ page }) => {
+  await page.getByRole('button', { name: 'Examples' }).click();
+  await page.getByRole('button', { name: /^Bell state/ }).click();
+  await page.getByRole('tab', { name: 'Cirq' }).click();
+  await page.getByRole('button', { name: 'Download', exact: true }).click();
+  await expect(page.getByRole('radio', { name: 'Cirq' })).toBeChecked();
+
+  await page.getByRole('radio', { name: 'pyQuil' }).check();
+  const [notebook] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Notebook (.ipynb)' }).click()]);
+  expect(notebook.suggestedFilename()).toBe('bell-pyquil.ipynb');
+  const cells = JSON.parse(await readFile((await notebook.path())!, 'utf8')).cells;
+  expect(cells[0].source.join('')).toContain('# Bell state');
+  expect(cells[1].source.join('')).toContain('program += CNOT(0, 1)');
+
+  const [qasm] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'OpenQASM (.qasm)' }).click()]);
+  expect(qasm.suggestedFilename()).toBe('bell.qasm');
+  expect(await readFile((await qasm.path())!, 'utf8')).toContain('cx q[0],q[1];');
+});
+
 test('keeps working offline after the first visit', async ({ page, context }) => {
   await page.evaluate(() => navigator.serviceWorker.ready);
   await context.setOffline(true);
@@ -183,7 +203,7 @@ test('has no automatically detectable accessibility issues', async ({ page }) =>
   const describe = (violations: { id: string; nodes: { target: unknown }[] }[]) => violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`);
   expect(describe((await new AxeBuilder({ page }).analyze()).violations)).toEqual([]);
 
-  for (const dialog of ['Examples', 'Open', 'Share']) {
+  for (const dialog of ['Examples', 'Open', 'Share', 'Download']) {
     await page.getByRole('button', { name: dialog, exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     expect(describe((await new AxeBuilder({ page }).include('dialog').analyze()).violations)).toEqual([]);
