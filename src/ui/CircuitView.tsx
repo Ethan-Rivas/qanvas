@@ -1,10 +1,10 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { forwardRef, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { formatAngle, parseAngle } from '../circuit/angle';
-import type { EditError, OpLocation } from '../circuit/edits';
+import type { OpLocation } from '../circuit/edits';
 import { hasAngle, kindOf, type GateKind } from '../circuit/gates';
 import { operationQubits, type Circuit, type Operation } from '../circuit/model';
-import { currentStep, useEditor } from '../editor/store';
+import { currentStep, useEditor, type Notice } from '../editor/store';
 import { pluralKey, type MessageKey, type Translate } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
 import type { SimulationResult } from '../sim/useSimulation';
@@ -14,7 +14,8 @@ import { StepCallout, Stepper } from './Stepper';
 
 const MIN_COLUMNS = 6;
 
-const NOTICE_KEYS: Partial<Record<EditError, MessageKey>> = {
+const NOTICE_KEYS: Partial<Record<Notice, MessageKey>> = {
+  'bad-link': 'error.bad-link',
   'after-measure': 'error.after-measure',
   'too-few-qubits': 'error.too-few-qubits',
   'too-many-qubits': 'error.too-many-qubits',

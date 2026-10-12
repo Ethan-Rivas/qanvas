@@ -22,7 +22,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
   color: inherit;
 }
@@ -230,6 +231,207 @@ button:disabled {
   transform: translateX(14px);
 }
 
+.header-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+}
+
+.header-title {
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+
+.button--primary {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--on-brand);
+  font-weight: 600;
+}
+
+.button--primary:not(:disabled):hover {
+  border-color: var(--brand-ink-hover);
+  background: var(--brand-ink-hover);
+}
+
+/* Dialogs */
+
+.dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 12px 40px var(--overlay-shadow);
+}
+
+.dialog::backdrop {
+  background: var(--overlay-shadow);
+}
+
+.dialog-body {
+  padding: 8px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dialog-heading h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.dialog-intro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.dialog-section h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.dialog-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1.5px dashed var(--notice-border);
+  border-radius: 10px;
+  background: var(--notice-bg);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--notice-ink);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.field-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.text-input {
+  flex: 1 1 240px;
+  min-width: 0;
+  min-height: var(--target);
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--ground);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.code-input {
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.code-input::placeholder {
+  color: var(--ink-muted);
+}
+
+.file-button {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.file-button:focus-within {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.example-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.example-card {
+  width: 100%;
+  height: 100%;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: left;
+}
+
+.example-card:hover {
+  border-color: var(--brand);
+}
+
+.example-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.example-description {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+.example-size {
+  margin-top: auto;
+  padding-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--brand-ink);
+}
+
 /* Layout */
 
 .workspace {
@@ -379,6 +581,30 @@ button:disabled {
   margin: 0;
   font-size: 13px;
   color: var(--ink-muted);
+}
+
+.try-this {
+  margin-top: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1.5px dashed var(--notice-border);
+  border-radius: 14px;
+  background: var(--notice-bg);
+}
+
+.try-this h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--notice-ink);
+}
+
+.try-this p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* Gate colors by family */

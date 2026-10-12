@@ -1,7 +1,7 @@
 import { beforeEach, expect, it } from 'vitest';
 import { EMPTY_CIRCUIT, useEditor } from './store';
 
-beforeEach(() => useEditor.setState({ circuit: EMPTY_CIRCUIT, past: [], future: [], selection: null, notice: null }));
+beforeEach(() => useEditor.setState({ circuit: EMPTY_CIRCUIT, exampleId: null, past: [], future: [], selection: null, notice: null }));
 
 it('undoes and redoes edits, and selects the gate that was placed', () => {
   const { placeGate, undo, redo } = useEditor.getState();
@@ -19,5 +19,5 @@ it('keeps the circuit and history unchanged when an edit is rejected', () => {
   const { placeGate } = useEditor.getState();
   placeGate('M', { column: 0, qubit: 0 });
   placeGate('H', { column: 1, qubit: 0 });
-  expect(useEditor.getState()).toMatchObject({ notice: 'after-measure', past: [EMPTY_CIRCUIT] });
+  expect(useEditor.getState()).toMatchObject({ notice: 'after-measure', past: [{ circuit: EMPTY_CIRCUIT, exampleId: null }] });
 });

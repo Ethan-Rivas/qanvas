@@ -2,6 +2,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { useState } from 'react';
 import { GATE_SYMBOL, type GateKind } from '../circuit/gates';
 import { useEditor } from '../editor/store';
+import { isExampleId } from '../examples/examples';
 import type { MessageKey } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
 import type { DragData } from './dnd';
@@ -52,6 +53,19 @@ function PaletteGate({ kind, layout }: { kind: GateKind; layout: 'cards' | 'grid
   );
 }
 
+function TryThis() {
+  const t = useT();
+  const learnMode = useEditor((s) => s.learnMode);
+  const exampleId = useEditor((s) => s.exampleId);
+  if (!learnMode || !isExampleId(exampleId)) return null;
+  return (
+    <section className="try-this" aria-labelledby="try-this-title">
+      <h2 id="try-this-title">{t('tryThis.title')}</h2>
+      <p>{t(`example.${exampleId}.tryThis`)}</p>
+    </section>
+  );
+}
+
 export function Palette() {
   const t = useT();
   const [query, setQuery] = useState('');
@@ -84,6 +98,7 @@ export function Palette() {
         </section>
       ))}
       {groups.length === 0 && <p className="palette-empty">{t('palette.noMatch', { query })}</p>}
+      <TryThis />
     </aside>
   );
 }

@@ -2,26 +2,38 @@ import { create } from 'zustand';
 import * as edits from '../circuit/edits';
 import type { Cell, EditError, EditResult, OpLocation } from '../circuit/edits';
 import type { GateKind } from '../circuit/gates';
-import type { Circuit, Operation } from '../circuit/model';
+import { validateCircuit, type Circuit, type Operation } from '../circuit/model';
+import type { ExampleId } from '../examples/examples';
 import type { Language } from '../i18n/i18n';
 
 const HISTORY_LIMIT = 200;
+
+export type Notice = EditError | 'bad-link';
 const LANGUAGE_KEY = 'qanvas.language';
 const LEARN_KEY = 'qanvas.learnMode';
 
+/** What undo and redo restore: the circuit and the example it started from, if any. */
+interface Snapshot {
+  circuit: Circuit;
+  exampleId: ExampleId | null;
+}
+
 export interface EditorState {
   circuit: Circuit;
-  past: Circuit[];
-  future: Circuit[];
+  exampleId: ExampleId | null;
+  past: Snapshot[];
+  future: Snapshot[];
   selection: OpLocation | null;
   clipboard: Operation | null;
-  notice: EditError | null;
+  notice: Notice | null;
   language: Language;
   learnMode: boolean;
   /** The step shown by the step-through slider; null follows the end of the circuit as it grows. */
   step: number | null;
 
   placeGate(kind: GateKind, cell: Cell): OpLocation | null;
+  /** Replaces the whole circuit, as one undoable edit. Returns false for an invalid circuit. */
+  loadCircuit(circuit: Circuit, exampleId?: ExampleId | null): boolean;
   movePart(from: OpLocation & { qubit: number }, to: Cell): OpLocation | null;
   removeOperation(at: OpLocation): void;
   setAngle(at: OpLocation, angle: number): void;
@@ -76,11 +88,11 @@ export const useEditor = create<EditorState>()((set, get) => {
       set({ notice: result.error });
       return null;
     }
-    const { circuit, past } = get();
+    const { circuit, exampleId, past } = get();
     if (result.circuit === circuit) return result.at ?? null;
     set({
       circuit: result.circuit,
-      past: [...past, circuit].slice(-HISTORY_LIMIT),
+      past: [...past, { circuit, exampleId }].slice(-HISTORY_LIMIT),
       future: [],
       notice: null,
       selection: result.at ?? (keepSelection ? get().selection : null),
@@ -90,6 +102,7 @@ export const useEditor = create<EditorState>()((set, get) => {
 
   return {
     circuit: EMPTY_CIRCUIT,
+    exampleId: null,
     past: [],
     future: [],
     selection: null,
@@ -100,6 +113,21 @@ export const useEditor = create<EditorState>()((set, get) => {
     step: null,
 
     placeGate: (kind, cell) => apply(edits.placeGate(get().circuit, kind, cell)),
+
+    loadCircuit(circuit, exampleId = null) {
+      if (validateCircuit(circuit).length > 0) return false;
+      const { past, ...current } = get();
+      set({
+        circuit,
+        exampleId,
+        past: [...past, { circuit: current.circuit, exampleId: current.exampleId }].slice(-HISTORY_LIMIT),
+        future: [],
+        selection: null,
+        notice: null,
+        step: null,
+      });
+      return true;
+    },
     movePart: (from, to) => apply(edits.movePart(get().circuit, from, to)),
     removeOperation: (at) => apply(edits.removeOperation(get().circuit, at)),
     setAngle: (at, angle) => apply(edits.setAngle(get().circuit, at, angle)),
@@ -119,15 +147,15 @@ export const useEditor = create<EditorState>()((set, get) => {
     },
 
     undo() {
-      const { past, future, circuit } = get();
+      const { past, future, circuit, exampleId } = get();
       if (past.length === 0) return;
-      set({ circuit: past[past.length - 1], past: past.slice(0, -1), future: [circuit, ...future], selection: null, notice: null });
+      set({ ...past[past.length - 1], past: past.slice(0, -1), future: [{ circuit, exampleId }, ...future], selection: null, notice: null });
     },
 
     redo() {
-      const { past, future, circuit } = get();
+      const { past, future, circuit, exampleId } = get();
       if (future.length === 0) return;
-      set({ circuit: future[0], past: [...past, circuit], future: future.slice(1), selection: null, notice: null });
+      set({ ...future[0], past: [...past, { circuit, exampleId }], future: future.slice(1), selection: null, notice: null });
     },
 
     select: (selection) => set({ selection }),

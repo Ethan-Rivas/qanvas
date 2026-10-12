@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GateKind } from '../circuit/gates';
 import { useEditor } from '../editor/store';
 import { useT } from '../i18n/useT';
+import { useShareLink } from '../share/useShareLink';
 import { useSimulation } from '../sim/useSimulation';
 import { CircuitView } from './CircuitView';
 import { CodePanel } from './CodePanel';
@@ -35,6 +36,7 @@ export function App() {
   const language = useEditor((s) => s.language);
   const circuit = useEditor((s) => s.circuit);
   const { result, pending } = useSimulation(circuit);
+  useShareLink();
   const circuitRef = useRef<HTMLElement>(null);
   const [dragging, setDragging] = useState<GateKind | null>(null);
   const [focusTarget, setFocusTarget] = useState<string | null>(null);

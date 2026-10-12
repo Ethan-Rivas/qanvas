@@ -114,6 +114,40 @@ test('steps through a circuit with explanations and the matching code line', asy
   await expect(page.locator('.callout')).toHaveCount(0);
 });
 
+test('loads an example and shares it as a link', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.getByRole('button', { name: 'Examples' }).click();
+  await page.getByRole('button', { name: /^GHZ state/ }).click();
+  await expect(page.getByRole('banner').getByText('GHZ state')).toBeVisible();
+  await expect(page.getByText('Move the H gate after the first CNOT.')).toBeVisible();
+  await expect(outcome(page, '|111⟩: 50%')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Share' }).click();
+  await page.getByRole('button', { name: 'Copy link' }).click();
+  await expect(page.getByText('Link copied')).toBeVisible();
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+
+  const other = await context.newPage();
+  await other.goto(link);
+  await expect(other.getByRole('banner').getByText('GHZ state')).toBeVisible();
+  await expect(outcome(other, '|111⟩: 50%')).toBeVisible();
+  await other.reload();
+  await expect(outcome(other, '|111⟩: 50%')).toBeVisible();
+});
+
+test('imports OpenQASM and explains what it cannot read', async ({ page }) => {
+  await page.getByRole('button', { name: 'Open' }).click();
+  const code = page.getByRole('textbox', { name: 'OpenQASM 2.0 code' });
+  await code.fill('OPENQASM 2.0;\nqreg q[1];\nu3(0,0,0) q[0];');
+  await page.getByRole('button', { name: 'Import' }).click();
+  await expect(page.getByRole('alert')).toHaveText("Line 3: Qanvas doesn't have the u3 gate yet.");
+
+  await code.fill('OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[2];\nh q[0];\ncx q[0],q[1];');
+  await page.getByRole('button', { name: 'Import' }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(outcome(page, '|11⟩: 50%')).toBeVisible();
+});
+
 test('switches the interface to Spanish', async ({ page }) => {
   await page.getByRole('button', { name: 'Español' }).click();
   await expect(page.getByRole('heading', { name: 'Si midieras ahora' })).toBeVisible();
