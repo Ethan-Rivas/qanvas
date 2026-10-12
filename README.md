@@ -20,7 +20,7 @@ Nothing is uploaded: the circuit is simulated on your own computer, and a share 
 
 ## What you can do
 
-- **Build circuits** with up to 12 qubits: H, X, Y, Z, S, S†, T, T†, Rx, Ry, Rz and P with any angle, CNOT, CZ, SWAP, Toffoli and measurement. Drag from the palette, move, copy, delete, undo and redo.
+- **Build circuits** with up to 12 qubits (24 in quantum-lab): H, X, Y, Z, S, S†, T, T†, Rx, Ry, Rz and P with any angle, CNOT, CZ, SWAP, Toffoli and measurement. Drag from the palette, move, copy, delete, undo and redo.
 - **See the results live:** the probability of each outcome, the amplitudes, and one Bloch sphere per qubit, whose arrow shrinks when the qubit is entangled.
 - **Step through the circuit** with the slider. In Learn mode, a short explanation at each step says what the gate did, with the state before and after.
 - **Copy or download code** in Qiskit, Cirq, pyQuil or OpenQASM 2.0, with the line for the current step highlighted. Downloads include a ready-to-run notebook or Python script that runs the circuit and counts the outcomes.
@@ -34,7 +34,11 @@ Qanvas writes kets with q0 first (leftmost), like Cirq and Quirk. Qiskit writes 
 
 ## Run it in quantum-lab
 
-In [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab), `docker compose up` starts Qanvas next to JupyterLab at **http://127.0.0.1:8080**. Build a circuit, then download it as a notebook and open it in JupyterLab, or copy the code into a notebook of your own. [docs/quantum-lab.md](docs/quantum-lab.md) describes how it's set up there.
+In [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab), `docker compose up` starts Qanvas next to JupyterLab at **http://127.0.0.1:8080**. There, Qanvas can do more:
+
+- **Open in notebook** saves the circuit as a notebook in the lab's `notebooks/qanvas/` folder and opens it in JupyterLab.
+- **Run with Qiskit Aer** runs circuits of 13 to 24 qubits, which are too large for the browser, and shows the counts.
+- **Edit Qiskit, Cirq and pyQuil code**: the lab runs your code, loops included, and the diagram shows the circuit it builds. Your code stays as you wrote it until you change the diagram. [docs/quantum-lab.md](docs/quantum-lab.md) describes how it's set up there.
 
 To run only Qanvas with Docker:
 

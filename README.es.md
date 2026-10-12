@@ -20,7 +20,7 @@ No se sube nada: el circuito se simula en tu propia computadora, y un enlace par
 
 ## Qué puedes hacer
 
-- **Armar circuitos** de hasta 12 qubits: H, X, Y, Z, S, S†, T, T†, Rx, Ry, Rz y P con cualquier ángulo, CNOT, CZ, SWAP, Toffoli y medición. Arrastra desde la paleta, mueve, copia, borra, deshaz y rehaz.
+- **Armar circuitos** de hasta 12 qubits (24 en quantum-lab): H, X, Y, Z, S, S†, T, T†, Rx, Ry, Rz y P con cualquier ángulo, CNOT, CZ, SWAP, Toffoli y medición. Arrastra desde la paleta, mueve, copia, borra, deshaz y rehaz.
 - **Ver los resultados en vivo:** la probabilidad de cada resultado, las amplitudes y una esfera de Bloch por qubit, cuya flecha se acorta cuando el qubit está entrelazado.
 - **Recorrer el circuito paso a paso** con el control deslizante. En el modo aprendizaje, una explicación corta en cada paso dice qué hizo la compuerta, con el estado de antes y de después.
 - **Copiar o descargar código** en Qiskit, Cirq, pyQuil u OpenQASM 2.0, con la línea del paso actual resaltada. Las descargas incluyen un notebook o un script de Python listo para correr, que ejecuta el circuito y cuenta los resultados.
@@ -34,7 +34,11 @@ Qanvas escribe los kets con q0 primero (a la izquierda), como Cirq y Quirk. Qisk
 
 ## Úsalo en quantum-lab
 
-En [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab/blob/main/README.es.md), `docker compose up` abre Qanvas junto a JupyterLab en **http://127.0.0.1:8080**. Arma un circuito y descárgalo como notebook para abrirlo en JupyterLab, o copia el código a un notebook tuyo. [docs/quantum-lab.md](docs/quantum-lab.md) explica cómo está configurado allá (en inglés).
+En [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab/blob/main/README.es.md), `docker compose up` abre Qanvas junto a JupyterLab en **http://127.0.0.1:8080**. Ahí Qanvas puede hacer más:
+
+- **Abrir en notebook** guarda el circuito como notebook en la carpeta `notebooks/qanvas/` del laboratorio y lo abre en JupyterLab.
+- **Correr con Qiskit Aer** corre circuitos de 13 a 24 qubits, demasiado grandes para el navegador, y muestra los conteos.
+- **Editar código de Qiskit, Cirq y pyQuil**: el laboratorio corre tu código, con todo y ciclos, y el diagrama muestra el circuito que arma. Tu código se queda como lo escribiste hasta que cambias el diagrama. [docs/quantum-lab.md](docs/quantum-lab.md) explica cómo está configurado allá (en inglés).
 
 Para correr solo Qanvas con Docker:
 
