@@ -111,3 +111,10 @@ export function validateCircuit(circuit: Circuit): CircuitError[] {
 
   return errors;
 }
+
+/** Equal circuits, whatever order their objects' keys were written in. */
+export function sameCircuit(a: Circuit, b: Circuit): boolean {
+  const canonical = (circuit: Circuit) =>
+    JSON.stringify(circuit, (_, value) => (value && typeof value === 'object' && !Array.isArray(value) ? Object.fromEntries(Object.entries(value).sort(([x], [y]) => (x < y ? -1 : 1))) : value));
+  return canonical(a) === canonical(b);
+}

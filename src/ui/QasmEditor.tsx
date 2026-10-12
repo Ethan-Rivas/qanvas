@@ -1,23 +1,16 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { Circuit } from '../circuit/model';
+import { MAX_QUBITS, type Circuit } from '../circuit/model';
 import { codeText, generateCode } from '../code/generate';
-import { importQasm, type ImportError } from '../code/qasmImport';
+import type { ImportError } from '../code/qasmImport';
+import { readQasmEdit } from '../editor/qasmEdit';
 import { useEditor } from '../editor/store';
 import type { MessageKey } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
 
 const PAUSE_MS = 500;
 
-/** Applies the code to the circuit if it reads and differs; returns the error otherwise. */
-function apply(text: string): ImportError | null {
-  const result = importQasm(text);
-  if (!result.ok) return result.error;
-  const { circuit, exampleId, loadCircuit } = useEditor.getState();
-  if (JSON.stringify(result.circuit) !== JSON.stringify(circuit)) loadCircuit(result.circuit, exampleId);
-  return null;
-}
-
-export function QasmEditor({ flush }: { flush: RefObject<(() => void) | null> }) {
+/** `flush` applies typing that hasn't been applied yet and says whether the code is valid. */
+export function QasmEditor({ flush }: { flush: RefObject<(() => boolean) | null> }) {
   const t = useT();
   const circuit = useEditor((s) => s.circuit);
   const generated = () => codeText(generateCode('qasm', useEditor.getState().circuit, t));
@@ -25,6 +18,31 @@ export function QasmEditor({ flush }: { flush: RefObject<(() => void) | null> })
   const [draft, setDraft] = useState(() => ({ text: generated(), dirty: false }));
   const [error, setError] = useState<ImportError | null>(null);
   const shown = useRef<Circuit>(circuit);
+  const latest = useRef({ draft, error });
+  latest.current = { draft, error };
+
+  function apply(text: string): ImportError | null {
+    const { circuit: current, exampleId, loadCircuit } = useEditor.getState();
+    const result = readQasmEdit(text, current, t);
+    const problem = result.ok ? null : result.error;
+    if (result.ok && result.circuit) {
+      loadCircuit(result.circuit, exampleId);
+      shown.current = useEditor.getState().circuit;
+    }
+    setError(problem);
+    setDraft((d) => (d.text === text ? { ...d, dirty: false } : d));
+    return problem;
+  }
+
+  useEffect(() => {
+    flush.current = () => {
+      const { draft: d, error: e } = latest.current;
+      return (d.dirty ? apply(d.text) : e) === null;
+    };
+    return () => {
+      flush.current = null;
+    };
+  });
 
   // An undo or a change made in the diagram while editing replaces the text with the new circuit's code.
   useEffect(() => {
@@ -37,23 +55,13 @@ export function QasmEditor({ flush }: { flush: RefObject<(() => void) | null> })
 
   useEffect(() => {
     if (!draft.dirty) return;
-    const run = () => {
-      const problem = apply(draft.text);
-      setError(problem);
-      shown.current = useEditor.getState().circuit;
-      setDraft((d) => (d.text === draft.text ? { ...d, dirty: false } : d));
-    };
-    flush.current = run;
-    const timer = setTimeout(run, PAUSE_MS);
-    return () => {
-      clearTimeout(timer);
-      flush.current = null;
-    };
-  }, [draft, flush]);
+    const timer = setTimeout(() => apply(draft.text), PAUSE_MS);
+    return () => clearTimeout(timer);
+  }, [draft]);
 
   function message(e: ImportError): string {
     const key: MessageKey = e.code === 'syntax' && e.line === undefined ? 'import.error.invalid' : `import.error.${e.code}`;
-    return t(key, { line: e.line ?? '', detail: e.detail ?? '' });
+    return t(key, { line: e.line ?? '', detail: e.detail ?? '', max: MAX_QUBITS });
   }
 
   return (

@@ -76,10 +76,12 @@ export function CodePanel() {
   const inLab = useLab((s) => s.lab !== null);
   const [downloading, setDownloading] = useState(false);
   const [editing, setEditing] = useState(false);
-  const flushEdit = useRef<(() => void) | null>(null);
+  const flushEdit = useRef<(() => boolean) | null>(null);
 
-  function finishEditing() {
-    flushEdit.current?.();
+  /** Closes the editor; with `keepIfInvalid`, an error stays on screen instead of vanishing with the editor. */
+  function finishEditing(keepIfInvalid = false) {
+    const valid = flushEdit.current?.() ?? true;
+    if (!valid && keepIfInvalid) return;
     setEditing(false);
   }
   const [copyStatus, setCopyStatus] = useState<'copied' | 'failed' | null>(null);
@@ -231,14 +233,19 @@ export function CodePanel() {
             {copyStatus && t(copyStatus === 'copied' ? 'code.copied' : 'code.copyFailed')}
           </span>
           {format === 'qasm' && (
-            <button type="button" className="button button--small" onClick={() => (editing ? finishEditing() : setEditing(true))}>
+            <button type="button" className="button button--small" onClick={() => (editing ? finishEditing(true) : setEditing(true))}>
               {t(editing ? 'code.done' : 'code.edit')}
             </button>
           )}
-          <button type="button" className="button button--small" onClick={copy}>
-            {t('code.copy')}
-          </button>
-          <button type="button" className="button button--small" onClick={() => setDownloading(true)}>
+          {!editing && (
+            <button type="button" className="button button--small" onClick={copy}>
+              {t('code.copy')}
+            </button>
+          )}
+          <button type="button" className="button button--small" onClick={() => {
+              flushEdit.current?.();
+              setDownloading(true);
+            }}>
             {t('download.button')}
           </button>
         </div>

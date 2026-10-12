@@ -194,7 +194,7 @@ test('opens the circuit as a notebook in JupyterLab when running in quantum-lab'
   await page.route('**/api/health', (route) => route.fulfill({ json: { version: 1, features: ['notebook'] } }));
   await page.route('**/api/notebook', async (route) => {
     saved = route.request().postDataJSON();
-    await route.fulfill({ status: 201, json: { path: 'qanvas/bell-qiskit.ipynb', url: '/?opened-in-jupyter' } });
+    await route.fulfill({ status: 201, json: { path: 'qanvas/bell-qiskit.ipynb', url: new URL('/?opened-in-jupyter', route.request().url()).href } });
   });
   await page.reload();
   await page.getByRole('button', { name: 'Examples' }).click();
@@ -220,6 +220,9 @@ test('edits the OpenQASM code and keeps the last valid circuit', async ({ page }
   await expect(page.getByRole('status').filter({ hasText: 'Line 5' })).toHaveText("Line 5: Qanvas couldn't read this statement. The circuit keeps its last valid version.");
   await expect(outcome(page, '|11⟩: 50%')).toBeVisible();
 
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(code).toBeVisible();
+  await code.fill('OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[2];\nh q[0];\ncx q[0],q[1];\n// done');
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.locator('#code-view')).toContainText('cx q[0],q[1];');
   await page.keyboard.press('ControlOrMeta+z');

@@ -1,4 +1,4 @@
-import type { Circuit } from '../circuit/model';
+import { sameCircuit, type Circuit } from '../circuit/model';
 import circuits from './circuits.json';
 
 export const EXAMPLE_IDS = ['bell', 'ghz', 'superdense-coding', 'teleportation', 'deutsch-jozsa', 'grover-2'] as const;
@@ -13,5 +13,5 @@ export function isExampleId(id: string | null): id is ExampleId {
 
 /** The example this circuit still is, unchanged; edits keep `exampleId` for the title and challenge, but not this. */
 export function unchangedExample(circuit: Circuit, id: string | null): ExampleId | null {
-  return isExampleId(id) && JSON.stringify(EXAMPLES[id]) === JSON.stringify(circuit) ? id : null;
+  return isExampleId(id) && sameCircuit(EXAMPLES[id], circuit) ? id : null;
 }
