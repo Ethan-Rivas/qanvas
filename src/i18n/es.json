@@ -222,5 +222,6 @@
   "a11y.step": "Paso {step}: {gates}.",
   "a11y.on": "{gate} en {qubits}",
   "a11y.controlled.one": "{gate}, control {controls}, objetivo {target}",
-  "a11y.controlled.other": "{gate}, controles {controls}, objetivo {target}"
+  "a11y.controlled.other": "{gate}, controles {controls}, objetivo {target}",
+  "app.description": "Arma circuitos cuánticos arrastrando compuertas, ve los resultados en vivo, recórrelos paso a paso con explicaciones y copia código que funciona."
 }

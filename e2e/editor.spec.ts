@@ -153,6 +153,15 @@ test('imports OpenQASM and explains what it cannot read', async ({ page }) => {
   await expect(outcome(page, '|11⟩: 50%')).toBeVisible();
 });
 
+test('keeps working offline after the first visit', async ({ page, context }) => {
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await context.setOffline(true);
+  await page.reload();
+  await drag(page, paletteGate(page, /Hadamard/), cell(page, 0, 0));
+  await expect(outcome(page, '|100⟩: 50%')).toBeVisible();
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', 'manifest.webmanifest');
+});
+
 test('switches the interface to Spanish', async ({ page }) => {
   await page.getByRole('button', { name: 'Español' }).click();
   await expect(page.getByRole('heading', { name: 'Si midieras ahora' })).toBeVisible();

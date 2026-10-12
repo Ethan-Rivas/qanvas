@@ -222,5 +222,6 @@
   "a11y.step": "Step {step}: {gates}.",
   "a11y.on": "{gate} on {qubits}",
   "a11y.controlled.one": "{gate}, control {controls}, target {target}",
-  "a11y.controlled.other": "{gate}, controls {controls}, target {target}"
+  "a11y.controlled.other": "{gate}, controls {controls}, target {target}",
+  "app.description": "Build quantum circuits by dragging gates, see the results live, step through them with explanations and copy working code."
 }

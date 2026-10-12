@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "reference": "sh scripts/reference.sh",
-    "test:export": "vitest run --config vitest.export.config.ts"
+    "test:export": "vitest run --config vitest.export.config.ts",
+    "icons": "node --experimental-strip-types --no-warnings scripts/icons.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
