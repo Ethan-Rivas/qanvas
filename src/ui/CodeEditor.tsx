@@ -1,43 +1,89 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { MAX_QUBITS, type Circuit } from '../circuit/model';
-import { codeText, generateCode } from '../code/generate';
+import { codeText, generateCode, type CodeFormat } from '../code/generate';
 import type { ImportError } from '../code/qasmImport';
 import { readQasmEdit } from '../editor/qasmEdit';
 import { useEditor } from '../editor/store';
 import type { MessageKey } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
+import { importCode, type LabError } from '../lab/lab';
 
-const PAUSE_MS = 500;
+// Python runs in quantum-lab, so it waits a little longer for typing to settle.
+const PAUSE_MS = { qasm: 500, python: 900 };
 
-/** `flush` applies typing that hasn't been applied yet and says whether the code is valid. */
-export function QasmEditor({ flush }: { flush: RefObject<(() => boolean) | null> }) {
+type Problem = { kind: 'qasm'; error: ImportError; fromLab: boolean } | { kind: 'lab'; error: LabError };
+
+/**
+ * Edits one code tab. OpenQASM is read in the browser; Qiskit, Cirq and pyQuil are run by
+ * quantum-lab, which answers with the circuit as OpenQASM. `flush` applies typing that hasn't
+ * been applied and says whether the editor can close; `onApplied` keeps the text the user wrote.
+ */
+export function CodeEditor({
+  format,
+  initial,
+  flush,
+  onApplied,
+}: {
+  format: CodeFormat;
+  initial: string;
+  flush: RefObject<(() => boolean) | null>;
+  onApplied: (text: string, circuit: Circuit) => void;
+}) {
   const t = useT();
   const circuit = useEditor((s) => s.circuit);
-  const generated = () => codeText(generateCode('qasm', useEditor.getState().circuit, t));
+  const python = format !== 'qasm';
+  const generated = () => codeText(generateCode(format, useEditor.getState().circuit, t));
   // `dirty` marks text the user typed; text rewritten from the circuit is never applied back.
-  const [draft, setDraft] = useState(() => ({ text: generated(), dirty: false }));
-  const [error, setError] = useState<ImportError | null>(null);
+  const [draft, setDraft] = useState(() => ({ text: initial, dirty: false }));
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const [running, setRunning] = useState(false);
   const shown = useRef<Circuit>(circuit);
-  const latest = useRef({ draft, error });
-  latest.current = { draft, error };
+  const latest = useRef({ draft, problem, running });
+  latest.current = { draft, problem, running };
 
-  function apply(text: string): ImportError | null {
+  /** Loads the circuit OpenQASM describes, unless it's the one already shown. */
+  function show(qasm: string, text: string, fromLab: boolean): Problem | null {
     const { circuit: current, exampleId, loadCircuit } = useEditor.getState();
-    const result = readQasmEdit(text, current, t);
-    const problem = result.ok ? null : result.error;
-    if (result.ok && result.circuit) {
-      loadCircuit(result.circuit, exampleId);
-      shown.current = useEditor.getState().circuit;
-    }
-    setError(problem);
+    const result = readQasmEdit(qasm, current, t);
+    if (!result.ok) return { kind: 'qasm', error: result.error, fromLab };
+    if (result.circuit) loadCircuit(result.circuit, exampleId);
+    shown.current = useEditor.getState().circuit;
+    onApplied(text, shown.current);
+    return null;
+  }
+
+  function settle(text: string, next: Problem | null) {
+    setProblem(next);
     setDraft((d) => (d.text === text ? { ...d, dirty: false } : d));
-    return problem;
+  }
+
+  async function apply(text: string) {
+    if (!python) return settle(text, show(text, text, false));
+    setRunning(true);
+    try {
+      const { qasm } = await importCode(format as 'qiskit' | 'cirq' | 'pyquil', text);
+      // Typing that came in while the lab worked gets its own run; this answer is for older text.
+      if (latest.current.draft.text === text) settle(text, show(qasm, text, true));
+    } catch (error) {
+      if (latest.current.draft.text === text) settle(text, { kind: 'lab', error: error as LabError });
+    } finally {
+      setRunning(false);
+    }
   }
 
   useEffect(() => {
     flush.current = () => {
-      const { draft: d, error: e } = latest.current;
-      return (d.dirty ? apply(d.text) : e) === null;
+      const { draft: d, problem: p, running: r } = latest.current;
+      if (d.dirty) {
+        if (!python) {
+          const next = show(d.text, d.text, false);
+          settle(d.text, next);
+          return next === null;
+        }
+        apply(d.text);
+        return false;
+      }
+      return p === null && !r;
     };
     return () => {
       flush.current = null;
@@ -50,37 +96,52 @@ export function QasmEditor({ flush }: { flush: RefObject<(() => boolean) | null>
     shown.current = circuit;
     if (draft.dirty) return;
     setDraft({ text: generated(), dirty: false });
-    setError(null);
+    setProblem(null);
   }, [circuit]);
 
   useEffect(() => {
     if (!draft.dirty) return;
-    const timer = setTimeout(() => apply(draft.text), PAUSE_MS);
+    const timer = setTimeout(() => apply(draft.text), python ? PAUSE_MS.python : PAUSE_MS.qasm);
     return () => clearTimeout(timer);
   }, [draft]);
 
-  function message(e: ImportError): string {
-    const key: MessageKey = e.code === 'syntax' && e.line === undefined ? 'import.error.invalid' : `import.error.${e.code}`;
-    return t(key, { line: e.line ?? '', detail: e.detail ?? '', max: MAX_QUBITS });
+  function message(p: Problem): string {
+    if (p.kind === 'qasm') {
+      const { code, line, detail } = p.error;
+      // Line numbers from the lab's OpenQASM wouldn't match the code on screen.
+      if (p.fromLab) return t(`code.lab.qasm.${code === 'after-measure' || code === 'classical-control' || code === 'reset' ? code : 'other'}`, { detail: detail ?? '' });
+      const key: MessageKey = code === 'syntax' && line === undefined ? 'import.error.invalid' : `import.error.${code}`;
+      return t(key, { line: line ?? '', detail: detail ?? '', max: MAX_QUBITS });
+    }
+    const { code, detail, line } = p.error;
+    if (code === 'python') return line ? t('code.lab.pythonAt', { line, detail: detail ?? '' }) : t('code.lab.python', { detail: detail ?? '' });
+    if (code === 'no-circuit') return t(`code.lab.noCircuit.${format as 'qiskit' | 'cirq' | 'pyquil'}`);
+    if (code === 'too-many-qubits') return t('code.lab.tooManyQubits', { detail: detail ?? '', max: MAX_QUBITS });
+    if (code === 'unsupported') return t('code.lab.unsupported', { detail: detail ?? '' });
+    if (code === 'timeout') return t('code.lab.timeout', { seconds: detail ?? '' });
+    if (code === 'unreachable') return t('code.lab.unreachable');
+    return t('code.lab.failed');
   }
+
+  const status = running ? t('code.lab.running') : problem ? `${message(problem)} ${t('code.keptCircuit')}` : t(python ? 'code.editHintLab' : 'code.editHint');
 
   return (
     <div className="qasm-editor">
-      <label htmlFor="qasm-editor" className="visually-hidden">
-        {t('code.editLabel')}
+      <label htmlFor="code-editor" className="visually-hidden">
+        {t(python ? 'code.editLabelPython' : 'code.editLabel', { framework: t(`code.format.${format}`) })}
       </label>
       <textarea
-        id="qasm-editor"
+        id="code-editor"
         className="qasm-editor-input"
         spellCheck={false}
         autoFocus
         rows={draft.text.split('\n').length + 1}
         value={draft.text}
-        aria-describedby="qasm-editor-status"
+        aria-describedby="code-editor-status"
         onChange={(e) => setDraft({ text: e.target.value, dirty: true })}
       />
-      <p id="qasm-editor-status" className="qasm-editor-status" role="status" data-error={error ? true : undefined}>
-        {error ? `${message(error)} ${t('code.keptCircuit')}` : t('code.editHint')}
+      <p id="code-editor-status" className="qasm-editor-status" role="status" data-error={problem && !running ? true : undefined}>
+        {status}
       </p>
     </div>
   );

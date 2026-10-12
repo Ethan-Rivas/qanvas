@@ -208,6 +208,55 @@ test('opens the circuit as a notebook in JupyterLab when running in quantum-lab'
   expect(saved?.notebook.cells[1].source.join('')).toContain('qc.cx(0, 1)');
 });
 
+const fourteenQubits = `OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[14];\ncreg c[14];\nx q[0];\nmeasure q -> c;`;
+
+async function openQasm(page: Page, code: string) {
+  await page.getByRole('button', { name: 'Open' }).click();
+  await page.getByRole('textbox', { name: 'OpenQASM 2.0 code or Quirk link' }).fill(code);
+  await page.getByRole('button', { name: 'Import' }).click();
+}
+
+test('runs circuits above 12 qubits on Qiskit Aer in quantum-lab, and explains why not elsewhere', async ({ page }) => {
+  await openQasm(page, fourteenQubits);
+  await expect(page.getByText('This circuit has 14 qubits. The browser works out circuits of up to 12; open it in quantum-lab', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Run with Qiskit Aer' })).toHaveCount(0);
+
+  let sent = '';
+  await page.route('**/api/health', (route) => route.fulfill({ json: { version: 1, features: ['notebook', 'run', 'import'] } }));
+  await page.route('**/api/run', (route) => {
+    sent = route.request().postDataJSON().qasm;
+    return route.fulfill({ json: { counts: { '10000000000000': 1000 }, measured: Array.from({ length: 14 }, (_, q) => q) } });
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'Run with Qiskit Aer' }).click();
+  await expect(page.locator('.results .visually-hidden', { hasText: '|10000000000000⟩: 100%' })).toBeVisible();
+  expect(sent).toContain('qreg q[14];');
+  await expect(page.getByRole('button', { name: 'Add qubit' })).toBeEnabled();
+});
+
+test('edits Qiskit code in quantum-lab and keeps it as typed until the diagram changes', async ({ page }) => {
+  const sent: { language: string; code: string }[] = [];
+  await page.route('**/api/health', (route) => route.fulfill({ json: { version: 1, features: ['notebook', 'run', 'import'] } }));
+  await page.route('**/api/import', (route) => {
+    sent.push(route.request().postDataJSON());
+    return route.fulfill({ json: { qasm: 'OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[2];\nh q[0];\nh q[1];\n' } });
+  });
+  await page.reload();
+  await page.getByRole('tab', { name: 'Qiskit' }).click();
+  await expect(page.getByText('Editing Qiskit, Cirq and pyQuil code is coming', { exact: false })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  const loop = 'from qiskit import QuantumCircuit\nqc = QuantumCircuit(2)\nfor i in range(2):\n    qc.h(i)\n';
+  await page.getByRole('textbox', { name: 'Qiskit code' }).fill(loop);
+  await expect(outcome(page, '|11⟩: 25%')).toBeVisible();
+  expect(sent.at(-1)).toEqual({ language: 'qiskit', code: loop });
+
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('#code-view')).toContainText('for i in range(2):');
+  await drag(page, paletteGate(page, /Hadamard/), cell(page, 1, 0));
+  await expect(page.locator('#code-view')).not.toContainText('for i in range(2):');
+  await expect(page.locator('#code-view')).toContainText('qc.h(0)');
+});
+
 test('edits the OpenQASM code and keeps the last valid circuit', async ({ page }) => {
   await expect(page.getByText('Editing Qiskit, Cirq and pyQuil code is coming to quantum-lab.', { exact: false })).toBeVisible();
   await page.getByRole('tab', { name: 'OpenQASM' }).click();

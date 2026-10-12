@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
-import { CODE_FORMATS, codeText, generateCode, type CodeFormat } from '../code/generate';
+import type { Circuit } from '../circuit/model';
+import { CODE_FORMATS, codeText, generateCode, type CodeFormat, type CodeLine } from '../code/generate';
 import { currentStep, useEditor } from '../editor/store';
 import { useT } from '../i18n/useT';
 import { useLab } from '../lab/lab';
 import { DownloadDialog } from './DownloadDialog';
-import { QasmEditor } from './QasmEditor';
+import { CodeEditor } from './CodeEditor';
 
 const FORMAT_KEY = 'qanvas.codeFormat';
 const HEIGHT_KEY = 'qanvas.codeHeight';
@@ -73,7 +74,10 @@ export function CodePanel() {
   const step = useEditor(currentStep);
   const showCurrent = useEditor((s) => s.learnMode || s.step !== null);
   const [format, setFormat] = useState(initialFormat);
-  const inLab = useLab((s) => s.lab !== null);
+  const canEditPython = useLab((s) => s.lab?.features.includes('import') ?? false);
+  const canEdit = format === 'qasm' || canEditPython;
+  // Code the user wrote stays on its tab until the diagram changes the circuit it built.
+  const [typed, setTyped] = useState<{ format: CodeFormat; text: string; circuit: Circuit } | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [editing, setEditing] = useState(false);
   const flushEdit = useRef<(() => boolean) | null>(null);
@@ -132,7 +136,10 @@ export function CodePanel() {
     event.preventDefault();
     resize(clampHeight(next));
   }
-  const lines = useMemo(() => generateCode(format, circuit, t), [format, circuit, t]);
+  const lines = useMemo(
+    () => (typed?.format === format && typed.circuit === circuit ? typed.text.replace(/\n$/, '').split('\n').map((text): CodeLine => ({ text })) : generateCode(format, circuit, t)),
+    [format, circuit, t, typed],
+  );
   const firstCurrent = showCurrent && step > 0 ? lines.findIndex((line) => line.column === step - 1) : -1;
 
   function choose(next: CodeFormat) {
@@ -232,7 +239,7 @@ export function CodePanel() {
           <span className="code-status" role="status">
             {copyStatus && t(copyStatus === 'copied' ? 'code.copied' : 'code.copyFailed')}
           </span>
-          {format === 'qasm' && (
+          {canEdit && (
             <button type="button" className="button button--small" onClick={() => (editing ? finishEditing(true) : setEditing(true))}>
               {t(editing ? 'code.done' : 'code.edit')}
             </button>
@@ -251,8 +258,8 @@ export function CodePanel() {
         </div>
       </div>
       <div ref={view} id="code-view" role="tabpanel" aria-labelledby={`code-tab-${format}`} tabIndex={0} className="code-view" style={height === null ? undefined : { height, maxHeight: 'none' }}>
-        {editing && format === 'qasm' ? (
-          <QasmEditor flush={flushEdit} />
+        {editing && canEdit ? (
+          <CodeEditor key={format} format={format} initial={codeText(lines)} flush={flushEdit} onApplied={(text, applied) => setTyped({ format, text, circuit: applied })} />
         ) : (
           <pre>
             <code>
@@ -270,7 +277,7 @@ export function CodePanel() {
           </pre>
         )}
       </div>
-      {format !== 'qasm' && !inLab && <p className="code-note">{t('code.editInLab')}</p>}
+      {!canEdit && <p className="code-note">{t('code.editInLab')}</p>}
       <DownloadDialog open={downloading} onClose={() => setDownloading(false)} format={format} />
     </section>
   );
