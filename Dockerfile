@@ -12,7 +12,8 @@ FROM nginxinc/nginx-unprivileged:1.27-alpine
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --chmod=755 deploy/bridge.sh /docker-entrypoint.d/40-qanvas-bridge.sh
 USER root
-RUN mkdir /etc/nginx/qanvas && chown nginx /etc/nginx/qanvas
+# Group 0 and group write, like the rest of this image, so it also runs under an arbitrary user ID.
+RUN mkdir /etc/nginx/qanvas && chown nginx:0 /etc/nginx/qanvas && chmod g+w /etc/nginx/qanvas
 USER nginx
 COPY --from=build /qanvas/dist /usr/share/nginx/html
 EXPOSE 8080

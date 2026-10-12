@@ -42,6 +42,7 @@ From 0.2, Qanvas's lab-only features go through a small Python service in quantu
 - **Discovery:** at start, Qanvas asks `./api/health`. Only when the bridge answers does the Download dialog show **Open in notebook**; the website and plain Docker never see it.
 - **Open in notebook:** Qanvas sends the same notebook the Download button saves to `POST /api/notebook`. The bridge saves it as `notebooks/qanvas/<name>.ipynb`, never overwriting a file (a second save becomes `<name>-2.ipynb`), and answers with the JupyterLab link Qanvas opens. `BRIDGE_JUPYTER_URL` sets where the browser reaches JupyterLab.
 - **Only Qanvas can write:** any website could make the browser send a request to 127.0.0.1:8080, so the bridge only accepts JSON whose `Origin` matches the address it was reached at. A request from another website is refused, and the JSON requirement means the browser asks first and gets no permission.
+- **Only Qanvas's own addresses:** the bridge answers only requests whose `Host` is `localhost`, `127.0.0.1` or `[::1]` (any port), or a GitHub Codespaces address (`<codespace>-<port>.app.github.dev`). This stops DNS rebinding, where a website points its own name at 127.0.0.1 so the browser treats the bridge as part of that website. In Codespaces, the JupyterLab link becomes `https://<codespace>-8888.app.github.dev`.
 
 In `docker-compose.yml`:
 
