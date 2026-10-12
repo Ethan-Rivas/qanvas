@@ -7,16 +7,26 @@ export interface Lab {
 
 export const useLab = create<{ lab: Lab | null }>(() => ({ lab: null }));
 
-/** Asks the bridge behind ./api/; on the website and in plain Docker there is none. */
-export async function detectLab(): Promise<void> {
+async function askLab(): Promise<Lab | null> {
   try {
     const response = await fetch('./api/health', { cache: 'no-store', signal: AbortSignal.timeout(3000) });
-    if (!response.ok) return;
+    if (!response.ok) return null;
     const data = await response.json();
-    if (data?.version === 1 && Array.isArray(data.features)) useLab.setState({ lab: { features: data.features } });
+    return data?.version === 1 && Array.isArray(data.features) ? { features: data.features } : null;
   } catch {
-    // No lab: the lab-only buttons stay hidden.
+    return null;
   }
+}
+
+/** Asks the bridge behind ./api/; on the website and in plain Docker there is none, and the lab-only buttons stay hidden. */
+export async function detectLab(): Promise<void> {
+  let lab = await askLab();
+  // The page can load before the bridge has started, so a lab that doesn't answer gets one more try.
+  if (!lab && (await fetch('./api/health', { method: 'HEAD' }).then((r) => r.status === 502 || r.status === 504, () => false))) {
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    lab = await askLab();
+  }
+  if (lab) useLab.setState({ lab });
 }
 
 export async function saveNotebook(name: string, notebook: string): Promise<{ path: string; url: string }> {
@@ -26,5 +36,8 @@ export async function saveNotebook(name: string, notebook: string): Promise<{ pa
     body: JSON.stringify({ name, notebook: JSON.parse(notebook) }),
   });
   if (!response.ok) throw new Error(`The lab answered ${response.status}`);
-  return response.json();
+  const answer = await response.json();
+  // The link opens in a tab that starts out with Qanvas's own origin, so only web addresses are allowed.
+  if (typeof answer?.path !== 'string' || !/^https?:$/.test(new URL(answer.url).protocol)) throw new Error('The lab sent an unexpected link');
+  return answer;
 }
