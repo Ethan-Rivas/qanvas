@@ -180,6 +180,13 @@ test('downloads the circuit as a notebook, a script or OpenQASM', async ({ page 
   const [qasm] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'OpenQASM (.qasm)' }).click()]);
   expect(qasm.suggestedFilename()).toBe('bell.qasm');
   expect(await readFile((await qasm.path())!, 'utf8')).toContain('cx q[0],q[1];');
+
+  await page.keyboard.press('Escape');
+  await drag(page, paletteGate(page, /Hadamard/), cell(page, 2, 0));
+  await page.getByRole('button', { name: 'Download', exact: true }).click();
+  const [edited] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Notebook (.ipynb)' }).click()]);
+  expect(edited.suggestedFilename()).toBe('circuit-cirq.ipynb');
+  expect(JSON.parse(await readFile((await edited.path())!, 'utf8')).cells[0].source[0]).toBe('# Qanvas circuit\n');
 });
 
 test('opens the circuit as a notebook in JupyterLab when running in quantum-lab', async ({ page, context }) => {

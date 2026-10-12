@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { notebook, PYTHON_FORMATS, pythonScript, type PythonFormat } from '../code/download';
 import { codeText, generateCode, type CodeFormat } from '../code/generate';
-import { isExampleId } from '../examples/examples';
+import { unchangedExample } from '../examples/examples';
 import { useEditor } from '../editor/store';
 import { saveNotebook, useLab } from '../lab/lab';
 import { useT } from '../i18n/useT';
@@ -21,8 +21,9 @@ export function DownloadDialog({ open, onClose, format }: { open: boolean; onClo
 
   function current() {
     const { circuit, exampleId } = useEditor.getState();
-    const name = isExampleId(exampleId) ? exampleId : 'circuit';
-    const title = isExampleId(exampleId) ? t(`example.${exampleId}.name`) : t('download.untitled');
+    const example = unchangedExample(circuit, exampleId);
+    const name = example ?? 'circuit';
+    const title = example ? t(`example.${example}.name`) : t('download.untitled');
     return { circuit, name, notebookText: () => notebook(framework, circuit, t, title) };
   }
 
