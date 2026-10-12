@@ -1,6 +1,6 @@
 """Runs the scripts and notebooks Qanvas downloads and saves the counts each one prints.
 
-Called by src/code/download.docker.ts inside the quantum-lab image:
+Called by src/code/export.docker.ts inside the quantum-lab image:
 python scripts/run_downloads.py cases.json results.json
 """
 

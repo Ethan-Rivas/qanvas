@@ -1,7 +1,7 @@
 import type { Circuit } from '../circuit/model';
 import type { Translate } from '../i18n/i18n';
 import { measures, operations } from './common';
-import { codeText, generateCode } from './generate';
+import { generateCode } from './generate';
 
 export type PythonFormat = 'qiskit' | 'cirq' | 'pyquil';
 export const PYTHON_FORMATS: PythonFormat[] = ['qiskit', 'cirq', 'pyquil'];
@@ -17,54 +17,61 @@ export function countedQubits(circuit: Circuit): number[] {
 const python = (text: string) => JSON.stringify(text);
 
 /** Code that runs the circuit SHOTS times and leaves `counts`, keyed by outcomes with q0 first. */
-function runCode(format: PythonFormat, circuit: Circuit, t: Translate): string[] {
+function runCode(format: PythonFormat, circuit: Circuit, t: Translate): { imports: string[]; body: string[] } {
   const counted = `measured = [${countedQubits(circuit).join(', ')}]`;
   const measureAll = measures(circuit) ? [] : [`# ${t('download.measureAll')}`];
   const tally = ['counts = {}', 'for key in keys:', '    counts[key] = counts.get(key, 0) + 1'];
   switch (format) {
     case 'qiskit':
-      return [
-        'from qiskit.primitives import StatevectorSampler',
-        '',
-        counted,
-        ...measureAll,
-        ...(measures(circuit) ? [] : ['qc.measure_all()']),
-        `result = StatevectorSampler().run([qc], shots=${SHOTS}).result()[0]`,
-        `# ${t('download.qiskitReverse')}`,
-        'counts = {}',
-        'for bits, n in result.join_data().get_counts().items():',
-        '    key = "".join(bits[::-1][q] for q in measured)',
-        '    counts[key] = counts.get(key, 0) + n',
-      ];
+      return {
+        imports: ['from qiskit.primitives import StatevectorSampler'],
+        body: [
+          counted,
+          ...measureAll,
+          ...(measures(circuit) ? [] : ['qc.measure_all()']),
+          `result = StatevectorSampler().run([qc], shots=${SHOTS}).result()[0]`,
+          `# ${t('download.qiskitReverse')}`,
+          'counts = {}',
+          'for bits, n in result.join_data().get_counts().items():',
+          '    key = "".join(bits[::-1][q] for q in measured)',
+          '    counts[key] = counts.get(key, 0) + n',
+        ],
+      };
     case 'cirq':
-      return [
-        counted,
-        ...measureAll,
-        ...(measures(circuit) ? [] : ['circuit.append(cirq.measure(q[i], key=f"q{i}") for i in measured)']),
-        `result = cirq.Simulator().run(circuit, repetitions=${SHOTS})`,
-        'histogram = result.multi_measurement_histogram(keys=[f"q{i}" for i in measured])',
-        'counts = {"".join(map(str, bits)): n for bits, n in histogram.items()}',
-      ];
+      return {
+        imports: [],
+        body: [
+          counted,
+          ...measureAll,
+          ...(measures(circuit) ? [] : ['circuit.append(cirq.measure(q[i], key=f"q{i}") for i in measured)']),
+          `result = cirq.Simulator().run(circuit, repetitions=${SHOTS})`,
+          'histogram = result.multi_measurement_histogram(keys=[f"q{i}" for i in measured])',
+          'counts = {"".join(map(str, bits)): n for bits, n in histogram.items()}',
+        ],
+      };
     case 'pyquil':
-      return [
-        'import warnings',
-        '',
-        'from pyquil import get_qc',
-        ...(measures(circuit) ? [] : ['from pyquil.gates import MEASURE']),
-        '',
-        counted,
-        ...measureAll,
-        ...(measures(circuit) ? [] : [`ro = program.declare("ro", "BIT", ${circuit.qubits})`, 'program += [MEASURE(q, ro[q]) for q in measured]']),
-        `# ${t('download.pyquil5')}`,
-        'warnings.filterwarnings("ignore", message=".*pyQuil v5")',
-        `# ${t('download.pyqvm', { qubits: circuit.qubits })}`,
-        `qc = get_qc("${circuit.qubits}q-pyqvm")`,
-        `program.wrap_in_numshots_loop(${SHOTS})`,
-        'readout = qc.run(program).get_register_map()["ro"]',
-        'keys = ["".join(str(shot[q]) for q in measured) for shot in readout]',
-        ...tally,
-      ];
+      return {
+        imports: ['import warnings', 'from pyquil import get_qc', ...(measures(circuit) ? [] : ['from pyquil.gates import MEASURE'])],
+        body: [
+          counted,
+          ...measureAll,
+          ...(measures(circuit) ? [] : [`ro = program.declare("ro", "BIT", ${circuit.qubits})`, 'program += [MEASURE(q, ro[q]) for q in measured]']),
+          `# ${t('download.pyquil5')}`,
+          'warnings.filterwarnings("ignore", message=".*pyQuil v5")',
+          `# ${t('download.pyqvm', { qubits: circuit.qubits })}`,
+          `qc = get_qc("${circuit.qubits}q-pyqvm")`,
+          `program.wrap_in_numshots_loop(${SHOTS})`,
+          'readout = qc.run(program).get_register_map()["ro"]',
+          'keys = ["".join(str(shot[q]) for q in measured) for shot in readout]',
+          ...tally,
+        ],
+      };
   }
+}
+
+function runCell(format: PythonFormat, circuit: Circuit, t: Translate): string[] {
+  const { imports, body } = runCode(format, circuit, t);
+  return [...imports, ...(imports.length > 0 ? [''] : []), ...body, 'counts'];
 }
 
 function plotCode(t: Translate): string[] {
@@ -79,15 +86,20 @@ function plotCode(t: Translate): string[] {
   ];
 }
 
+const isStandardLibrary = (line: string) => /^(import warnings|from math )/.test(line);
+
+/** The circuit code with the run code after it; the run code's imports join the ones at the top. */
 export function pythonScript(format: PythonFormat, circuit: Circuit, t: Translate): string {
-  return `${codeText(generateCode(format, circuit, t))}\n${[...runCode(format, circuit, t), 'print(counts)'].join('\n')}\n`;
+  const code = generateCode(format, circuit, t).map((line) => line.text);
+  const { imports, body } = runCode(format, circuit, t);
+  const end = code.indexOf('');
+  const standardLibraryFirst = [...code.slice(0, end), ...imports].sort((a, b) => Number(isStandardLibrary(b)) - Number(isStandardLibrary(a)));
+  return [...standardLibraryFirst, ...code.slice(end), '', ...body, 'print(counts)', ''].join('\n');
 }
 
 function cell(kind: 'markdown' | 'code', id: number, lines: string[]) {
   const source = lines.map((line, k) => (k < lines.length - 1 ? `${line}\n` : line));
-  return kind === 'markdown'
-    ? { cell_type: kind, id: `cell-${id}`, metadata: {}, source }
-    : { cell_type: kind, id: `cell-${id}`, metadata: {}, execution_count: null, outputs: [], source };
+  return kind === 'markdown' ? { cell_type: kind, id: `cell-${id}`, metadata: {}, source } : { cell_type: kind, id: `cell-${id}`, metadata: {}, execution_count: null, outputs: [], source };
 }
 
 export function notebook(format: PythonFormat, circuit: Circuit, t: Translate, title: string): string {
@@ -96,7 +108,7 @@ export function notebook(format: PythonFormat, circuit: Circuit, t: Translate, t
     cell('markdown', 1, [`# ${title}`, '', t('download.notebookIntro', { framework: t(`code.format.${format}`) })]),
     cell('code', 2, circuitCode),
     cell('markdown', 3, [t('download.runIntro', { shots: SHOTS })]),
-    cell('code', 4, [...runCode(format, circuit, t), 'counts']),
+    cell('code', 4, runCell(format, circuit, t)),
     cell('code', 5, plotCode(t)),
   ];
   const metadata = {
