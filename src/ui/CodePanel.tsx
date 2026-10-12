@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerE
 import { CODE_FORMATS, codeText, generateCode, type CodeFormat } from '../code/generate';
 import { currentStep, useEditor } from '../editor/store';
 import { useT } from '../i18n/useT';
+import { useLab } from '../lab/lab';
 import { DownloadDialog } from './DownloadDialog';
 import { QasmEditor } from './QasmEditor';
 
@@ -72,6 +73,7 @@ export function CodePanel() {
   const step = useEditor(currentStep);
   const showCurrent = useEditor((s) => s.learnMode || s.step !== null);
   const [format, setFormat] = useState(initialFormat);
+  const inLab = useLab((s) => s.lab !== null);
   const [downloading, setDownloading] = useState(false);
   const [editing, setEditing] = useState(false);
   const flushEdit = useRef<(() => void) | null>(null);
@@ -261,7 +263,7 @@ export function CodePanel() {
           </pre>
         )}
       </div>
-      {format !== 'qasm' && <p className="code-note">{t('code.editInLab')}</p>}
+      {format !== 'qasm' && !inLab && <p className="code-note">{t('code.editInLab')}</p>}
       <DownloadDialog open={downloading} onClose={() => setDownloading(false)} format={format} />
     </section>
   );

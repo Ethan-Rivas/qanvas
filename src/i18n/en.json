@@ -251,5 +251,10 @@
   "code.editLabel": "OpenQASM 2.0 code",
   "code.editHint": "The circuit updates when you pause typing.",
   "code.keptCircuit": "The circuit keeps its last valid version.",
-  "code.editInLab": "Editing Qiskit, Cirq and pyQuil code is coming to quantum-lab. For now, you can edit the OpenQASM tab."
+  "code.editInLab": "Editing Qiskit, Cirq and pyQuil code is coming to quantum-lab. For now, you can edit the OpenQASM tab.",
+  "lab.openNotebook": "Open in notebook",
+  "lab.sending": "Sending to JupyterLab…",
+  "lab.saved": "Saved as {path} in the lab's notebooks folder.",
+  "lab.openLink": "Open it in JupyterLab",
+  "lab.failed": "Couldn't send the notebook to the lab. You can download it instead."
 }

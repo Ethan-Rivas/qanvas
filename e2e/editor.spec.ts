@@ -168,6 +168,7 @@ test('downloads the circuit as a notebook, a script or OpenQASM', async ({ page 
   await page.getByRole('tab', { name: 'Cirq' }).click();
   await page.getByRole('button', { name: 'Download', exact: true }).click();
   await expect(page.getByRole('radio', { name: 'Cirq' })).toBeChecked();
+  await expect(page.getByRole('button', { name: 'Open in notebook' })).toHaveCount(0);
 
   await page.getByRole('radio', { name: 'pyQuil' }).check();
   const [notebook] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Notebook (.ipynb)' }).click()]);
@@ -179,6 +180,25 @@ test('downloads the circuit as a notebook, a script or OpenQASM', async ({ page 
   const [qasm] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'OpenQASM (.qasm)' }).click()]);
   expect(qasm.suggestedFilename()).toBe('bell.qasm');
   expect(await readFile((await qasm.path())!, 'utf8')).toContain('cx q[0],q[1];');
+});
+
+test('opens the circuit as a notebook in JupyterLab when running in quantum-lab', async ({ page, context }) => {
+  let saved: { name: string; notebook: { cells: { source: string[] }[] } } | undefined;
+  await page.route('**/api/health', (route) => route.fulfill({ json: { version: 1, features: ['notebook'] } }));
+  await page.route('**/api/notebook', async (route) => {
+    saved = route.request().postDataJSON();
+    await route.fulfill({ status: 201, json: { path: 'qanvas/bell-qiskit.ipynb', url: '/?opened-in-jupyter' } });
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'Examples' }).click();
+  await page.getByRole('button', { name: /^Bell state/ }).click();
+  await page.getByRole('button', { name: 'Download', exact: true }).click();
+
+  const [jupyter] = await Promise.all([context.waitForEvent('page'), page.getByRole('button', { name: 'Open in notebook' }).click()]);
+  await expect(page.getByText("Saved as qanvas/bell-qiskit.ipynb in the lab's notebooks folder.")).toBeVisible();
+  await expect.poll(() => jupyter.url()).toContain('?opened-in-jupyter');
+  expect(saved?.name).toBe('bell-qiskit');
+  expect(saved?.notebook.cells[1].source.join('')).toContain('qc.cx(0, 1)');
 });
 
 test('edits the OpenQASM code and keeps the last valid circuit', async ({ page }) => {

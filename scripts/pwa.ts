@@ -101,7 +101,9 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  const url = new URL(request.url);
+  // quantum-lab's bridge answers under ./api/; its answers are live and never come from the cache.
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith(new URL('./api/', self.location).pathname)) return;
   // Pages come from the network when it's there, so a new version shows up on the next visit.
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).catch(() => caches.match(new URL('./', self.location).href, { ignoreVary: true })));
