@@ -6,7 +6,7 @@ export type QuirkResult = { ok: true; circuit: Circuit } | { ok: false; error: {
 
 const FIXED: Record<string, GateName> = { H: 'H', X: 'X', Y: 'Y', Z: 'Z', 'Z^½': 'S', 'Z^-½': 'Sdg', 'Z^¼': 'T', 'Z^-¼': 'Tdg' };
 
-const FRACTIONS: Record<string, number> = { '½': 1 / 2, '¼': 1 / 4, '⅛': 1 / 8, '⅓': 1 / 3, '⅟₁₆': 1 / 16, '⅟₃₂': 1 / 32, '⅟₁₂₈': 1 / 128 };
+const FRACTIONS: Record<string, number> = { '½': 1 / 2, '¼': 1 / 4, '⅛': 1 / 8, '⅓': 1 / 3, '⅟₁₆': 1 / 16, '⅟₃₂': 1 / 32, '⅟₆₄': 1 / 64, '⅟₁₂₈': 1 / 128 };
 
 // Quirk's X^f and Y^f equal Rx(πf) and Ry(πf), and Z^f equals P(πf), up to a global phase, which no
 // measurement can see and which only matters for controlled versions (refused below).
@@ -80,20 +80,49 @@ function convertColumn(cells: Cell[], unsupported: Set<string>): Operation[][] {
   return columns;
 }
 
+/**
+ * Quirk can start a wire in another state; Qanvas starts every qubit in |0⟩, so leading columns
+ * prepare it exactly: |1⟩ = X|0⟩, |+⟩ = H|0⟩, |−⟩ = H X|0⟩, |i⟩ = S H|0⟩, |−i⟩ = S† H|0⟩.
+ */
+function preparation(init: unknown[]): Operation[][] | null {
+  const steps: Record<string, GateName[]> = { '0': [], '1': ['X'], '+': ['H'], '-': ['X', 'H'], i: ['H', 'S'], '-i': ['H', 'Sdg'] };
+  const columns: Operation[][] = [[], [], []];
+  for (const [q, state] of init.entries()) {
+    const gates = steps[String(state)];
+    if (!gates) return null;
+    // X goes first, H second and S or S† last, so each qubit's gates keep their order.
+    for (const gate of gates) columns[gate === 'X' ? 0 : gate === 'H' ? 1 : 2].push({ gate, targets: [q] });
+  }
+  return columns.filter((column) => column.length > 0);
+}
+
 /** The circuit JSON from a Quirk or Quirk-E link (`…#circuit={…}`), or the JSON itself. */
 function circuitJson(input: string): unknown {
   const text = input.trim();
   const match = /[#?&]circuit=(.*)$/s.exec(text);
   if (!match) return JSON.parse(text);
+  // The JSON may be URL-encoded or not, and other parameters may follow it after an "&".
+  const candidates = [match[1], match[1].split('&')[0]].flatMap((raw) => [raw, safeDecode(raw)]);
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // Try the next reading.
+    }
+  }
+  throw new Error('not JSON');
+}
+
+function safeDecode(text: string): string {
   try {
-    return JSON.parse(decodeURIComponent(match[1]));
+    return decodeURIComponent(text);
   } catch {
-    return JSON.parse(match[1]);
+    return text;
   }
 }
 
 export function looksLikeQuirk(input: string): boolean {
-  return /[#?&]circuit=/.test(input) || /^\s*\{\s*"cols"/.test(input);
+  return !/\bOPENQASM\b/.test(input) && /[#?&]circuit=/.test(input) || /^\s*\{\s*"cols"/.test(input);
 }
 
 export function importQuirk(input: string): QuirkResult {
@@ -112,7 +141,6 @@ export function importQuirk(input: string): QuirkResult {
     }
   }
   const unsupported = new Set<string>();
-  if (Array.isArray(data.init) && data.init.some((state) => state !== 0)) unsupported.add('init');
 
   const cols = data.cols as unknown[][];
   let columns: Operation[][];
@@ -121,6 +149,9 @@ export function importQuirk(input: string): QuirkResult {
   } catch {
     return { ok: false, error: { code: 'invalid' } };
   }
+  const prepared = Array.isArray(data.init) ? preparation(data.init) : [];
+  if (prepared === null) return { ok: false, error: { code: 'invalid' } };
+  columns = [...prepared, ...columns];
   if (unsupported.size > 0) return { ok: false, error: { code: 'unsupported', detail: [...unsupported].join(', ') } };
 
   const used = columns.flat().flatMap((op) => [...op.targets, ...(op.controls ?? [])]);

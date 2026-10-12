@@ -40,10 +40,25 @@ describe('Quirk import', () => {
     expect(sameUpToPhase(finalState(imported(link)), finalState(byHand))).toBe(true);
   });
 
+  it('prepares the starting states Quirk allows exactly, and reads links with other parameters', () => {
+    const circuit = imported(`${quirkLink({ cols: [['X']], init: [1, '-', 'i', '-i', '+'] })}&other=1`);
+    const byHand: Circuit = {
+      qubits: 5,
+      columns: [
+        [{ gate: 'X', targets: [0] }, { gate: 'X', targets: [1] }],
+        [{ gate: 'H', targets: [1] }, { gate: 'H', targets: [2] }, { gate: 'H', targets: [3] }, { gate: 'H', targets: [4] }],
+        [{ gate: 'S', targets: [2] }, { gate: 'Sdg', targets: [3] }],
+        [{ gate: 'X', targets: [0] }],
+      ],
+    };
+    expect(circuit).toEqual(byHand);
+  });
+
   it('refuses links it cannot import exactly and names what is missing', () => {
     const grover = { cols: [['H', 'H'], ['~oracle'], ['◦', 'X'], ['•', 'H'], [{ id: 'Rxft', arg: 'pi t' }]], gates: [{ id: '~oracle', name: 'Oracle', circuit: { cols: [] } }] };
     expect(importQuirk(quirkLink(grover))).toEqual({ ok: false, error: { code: 'unsupported', detail: 'Oracle, ◦, •H, Rxft(pi t)' } });
     expect(importQuirk(quirkLink({ cols: [['Measure'], ['H']] }))).toEqual({ ok: false, error: { code: 'after-measure' } });
     expect(importQuirk('https://algassert.com/quirk#circuit={"cols":')).toEqual({ ok: false, error: { code: 'invalid' } });
+    expect(importQuirk(quirkLink({ cols: [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 'H']] }))).toEqual({ ok: false, error: { code: 'too-many-qubits', detail: '13' } });
   });
 });

@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent } from 'react';
+import { MAX_QUBITS } from '../circuit/model';
 import { importQasm, type ImportError } from '../code/qasmImport';
 import { importQuirk, looksLikeQuirk, type QuirkResult } from '../code/quirkImport';
 import { useEditor } from '../editor/store';
@@ -52,10 +53,10 @@ export function OpenDialog({ open, onClose }: { open: boolean; onClose: () => vo
 
   function message(p: Problem): string {
     if (p.kind === 'bad-file') return t('open.badFile');
-    if (p.kind === 'quirk') return t(`import.quirk.${p.error.code}`, { detail: p.error.detail ?? '' });
+    if (p.kind === 'quirk') return t(`import.quirk.${p.error.code}`, { detail: p.error.detail ?? '', max: MAX_QUBITS });
     const { code: errorCode, line, detail } = p.error;
     const key: MessageKey = errorCode === 'syntax' && line === undefined ? 'import.error.invalid' : `import.error.${errorCode}`;
-    return t(key, { line: line ?? '', detail: detail ?? '' });
+    return t(key, { line: line ?? '', detail: detail ?? '', max: MAX_QUBITS });
   }
 
   return (
