@@ -44,3 +44,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t qanvas:ci .
+      - name: Serve the page, with /api/ only when a lab bridge is set
+        run: |
+          docker run -d --name qanvas -p 127.0.0.1:8080:8080 qanvas:ci
+          sleep 2
+          curl -fsS http://127.0.0.1:8080/ | grep -q '<title>Qanvas</title>'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/health)" = 404
+          docker rm -f qanvas
+          docker run -d --name qanvas -e QANVAS_BRIDGE_URL=http://lab-bridge:8000 qanvas:ci
+          sleep 2
+          docker exec qanvas grep -q 'proxy_pass' /etc/nginx/qanvas/bridge.conf

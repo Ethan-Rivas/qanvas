@@ -10,5 +10,9 @@ RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --chmod=755 deploy/bridge.sh /docker-entrypoint.d/40-qanvas-bridge.sh
+USER root
+RUN mkdir /etc/nginx/qanvas && chown nginx /etc/nginx/qanvas
+USER nginx
 COPY --from=build /qanvas/dist /usr/share/nginx/html
 EXPOSE 8080

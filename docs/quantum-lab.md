@@ -34,6 +34,42 @@ Check that the service answers, for example:
 curl -fsS http://127.0.0.1:8080/ | grep -q '<title>Qanvas</title>'
 ```
 
+## 4. The lab bridge (Qanvas 0.2)
+
+From 0.2, Qanvas's lab-only features go through a small Python service in quantum-lab, `bridge/bridge.py`, run from the lab's own image as the `lab-bridge` service with the `notebooks/` folder mounted. It has no published port.
+
+- **Forwarding:** when `QANVAS_BRIDGE_URL` is set, `deploy/bridge.sh` makes the image's nginx forward `/api/` to that address, resolving the name on each request so Qanvas starts even before the bridge does. Without the variable, `/api/` answers 404.
+- **Discovery:** at start, Qanvas asks `./api/health`. Only when the bridge answers does the Download dialog show **Open in notebook**; the website and plain Docker never see it.
+- **Open in notebook:** Qanvas sends the same notebook the Download button saves to `POST /api/notebook`. The bridge saves it as `notebooks/qanvas/<name>.ipynb`, never overwriting a file (a second save becomes `<name>-2.ipynb`), and answers with the JupyterLab link Qanvas opens. `BRIDGE_JUPYTER_URL` sets where the browser reaches JupyterLab.
+- **Only Qanvas can write:** any website could make the browser send a request to 127.0.0.1:8080, so the bridge only accepts JSON whose `Origin` matches the address it was reached at. A request from another website is refused, and the JSON requirement means the browser asks first and gets no permission.
+
+In `docker-compose.yml`:
+
+```yaml
+  qanvas:
+    image: ghcr.io/ethan-rivas/qanvas:0.2.0
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      QANVAS_BRIDGE_URL: http://lab-bridge:8000
+    depends_on:
+      - lab-bridge
+
+  lab-bridge:
+    image: quantum-lab:local
+    pull_policy: never
+    command: ["python", "/opt/quantum-lab/bridge.py"]
+    volumes:
+      - ./notebooks:/home/quantum/work
+    environment:
+      JUPYTER_TOKEN: ${JUPYTER_TOKEN:-quantum}
+      BRIDGE_JUPYTER_URL: http://127.0.0.1:8888
+    depends_on:
+      - notebook
+```
+
+To try an unreleased Qanvas in the lab, build it as `qanvas:local` and start the lab with a compose override that sets the `qanvas` service's image to `qanvas:local` and `pull_policy: never`.
+
 ## Checking the image locally
 
 ```sh
