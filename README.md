@@ -76,9 +76,10 @@ npm run icons        # renders public/icons from the design tokens
 
 ## Roadmap
 
-- [ ] **0.2:** run bigger circuits with Qiskit Aer through quantum-lab; import from Qiskit code and Quirk links; "Open in notebook" to send the circuit to JupyterLab.
+- [ ] **0.2:** edit the OpenQASM code directly; import Quirk links; download the circuit as a notebook, a Python script or OpenQASM; "Open in notebook" to send it to JupyterLab; run bigger circuits with Qiskit Aer and import Qiskit code through quantum-lab.
 - [ ] **0.3:** noise models (depolarizing, readout error) with an ideal vs noisy view; mid-circuit measurement.
 - [ ] **0.4:** custom gates and subcircuits; lessons that chain several examples.
+- [ ] **0.5:** import real Qiskit notebooks and pick one of their circuits, including long ones with hundreds of steps.
 - [ ] **Later:** run on real IBM hardware through quantum-lab; collaboration.
 
 ## Contributing
