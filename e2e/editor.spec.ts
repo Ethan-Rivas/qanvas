@@ -31,6 +31,11 @@ test('builds a GHZ state by dragging gates and updates the results live', async 
   await drag(page, paletteGate(page, /^CNOT/), cell(page, 2, 1));
 
   await expect(page.getByText('3 qubits · 3 steps')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Circuit summary' }).getByRole('listitem')).toHaveText([
+    'Step 1: Hadamard on q0.',
+    'Step 2: CNOT, control q0, target q1.',
+    'Step 3: CNOT, control q1, target q2.',
+  ]);
   await expect(outcome(page, '|000⟩: 50%')).toBeVisible();
   await expect(outcome(page, '|111⟩: 50%')).toBeVisible();
   await expect(outcome(page, '|110⟩: 0%')).toBeVisible();
@@ -166,6 +171,14 @@ test('has no automatically detectable accessibility issues', async ({ page }) =>
   await drag(page, paletteGate(page, /^CNOT/), cell(page, 1, 0));
   await page.getByRole('button', { name: 'Previous step' }).click();
   await page.getByText('Amplitudes').click();
-  const { violations } = await new AxeBuilder({ page }).analyze();
-  expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`)).toEqual([]);
+  const describe = (violations: { id: string; nodes: { target: unknown }[] }[]) => violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`);
+  expect(describe((await new AxeBuilder({ page }).analyze()).violations)).toEqual([]);
+
+  for (const dialog of ['Examples', 'Open', 'Share']) {
+    await page.getByRole('button', { name: dialog, exact: true }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    expect(describe((await new AxeBuilder({ page }).include('dialog').analyze()).violations)).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog')).toBeHidden();
+  }
 });

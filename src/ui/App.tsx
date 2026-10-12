@@ -62,7 +62,8 @@ export function App() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (dragging || isTextField(event.target)) return;
+      // Dialogs handle their own keys; Escape there must close the dialog, not clear the selection.
+      if (dragging || isTextField(event.target) || (event.target instanceof Element && event.target.closest('dialog'))) return;
       const editor = useEditor.getState();
       const mod = event.metaKey || event.ctrlKey;
       const key = event.key.toLowerCase();

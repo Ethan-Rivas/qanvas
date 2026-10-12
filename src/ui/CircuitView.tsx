@@ -5,7 +5,7 @@ import type { OpLocation } from '../circuit/edits';
 import { hasAngle, kindOf, type GateKind } from '../circuit/gates';
 import { operationQubits, type Circuit, type Operation } from '../circuit/model';
 import { currentStep, useEditor, type Notice } from '../editor/store';
-import { pluralKey, type MessageKey, type Translate } from '../i18n/i18n';
+import { pluralKey, type Language, type MessageKey, type Translate } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
 import type { SimulationResult } from '../sim/useSimulation';
 import { cellId, type DragData, type DropData } from './dnd';
@@ -62,6 +62,36 @@ function partLabel(t: Translate, part: Part): string {
 }
 
 type Timeline = 'past' | 'future';
+
+function describeOperation(t: Translate, language: Language, op: Operation): string {
+  const list = (qs: number[]) => new Intl.ListFormat(language, { type: 'conjunction' }).format(qs.map((q) => `q${q}`));
+  const kind = kindOf(op);
+  if (kind === 'CNOT' || kind === 'CCX') {
+    const controls = op.controls ?? [];
+    return t(pluralKey(language, 'a11y.controlled', controls.length), { gate: gateLabel(t, op), controls: list(controls), target: `q${op.targets[0]}` });
+  }
+  return t('a11y.on', { gate: gateLabel(t, op), qubits: list(operationQubits(op)) });
+}
+
+/** A text version of the whole circuit for screen readers, step by step. */
+function CircuitSummary({ circuit }: { circuit: Circuit }) {
+  const t = useT();
+  const language = useEditor((s) => s.language);
+  return (
+    <section className="visually-hidden" aria-labelledby="circuit-summary">
+      <h2 id="circuit-summary">{t('a11y.summary')}</h2>
+      {circuit.columns.length === 0 ? (
+        <p>{t('a11y.empty')}</p>
+      ) : (
+        <ol>
+          {circuit.columns.map((column, c) => (
+            <li key={c}>{t('a11y.step', { step: c + 1, gates: column.map((op) => describeOperation(t, language, op)).join('; ') })}</li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
 
 function Cell({ column, qubit, timeline, children }: { column: number; qubit: number; timeline: Timeline; children?: ReactNode }) {
   const data: DropData = { column, qubit };
@@ -238,6 +268,7 @@ export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | 
         </button>
       </div>
 
+      <CircuitSummary circuit={circuit} />
       <div ref={cardRef} className="circuit-card" style={{ '--step': step } as CSSProperties}>
         <div
           ref={scrollRef}

@@ -216,5 +216,11 @@
   "import.error.classical-control": "Line {line}: Qanvas can't act on measurement results yet.",
   "import.error.reset": "Line {line}: Qanvas can't reset qubits yet.",
   "import.error.after-measure": "Line {line}: a gate comes after a measurement on the same qubit. In Qanvas, measurements go last.",
-  "error.bad-link": "This link doesn't contain a valid circuit."
+  "error.bad-link": "This link doesn't contain a valid circuit.",
+  "a11y.summary": "Circuit summary",
+  "a11y.empty": "The circuit is empty.",
+  "a11y.step": "Step {step}: {gates}.",
+  "a11y.on": "{gate} on {qubits}",
+  "a11y.controlled.one": "{gate}, control {controls}, target {target}",
+  "a11y.controlled.other": "{gate}, controls {controls}, target {target}"
 }

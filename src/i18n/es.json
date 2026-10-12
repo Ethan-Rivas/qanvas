@@ -216,5 +216,11 @@
   "import.error.classical-control": "Línea {line}: Qanvas todavía no puede actuar según los resultados de una medición.",
   "import.error.reset": "Línea {line}: Qanvas todavía no puede reiniciar qubits.",
   "import.error.after-measure": "Línea {line}: hay una compuerta después de una medición en el mismo qubit. En Qanvas, las mediciones van al final.",
-  "error.bad-link": "Este enlace no contiene un circuito válido."
+  "error.bad-link": "Este enlace no contiene un circuito válido.",
+  "a11y.summary": "Resumen del circuito",
+  "a11y.empty": "El circuito está vacío.",
+  "a11y.step": "Paso {step}: {gates}.",
+  "a11y.on": "{gate} en {qubits}",
+  "a11y.controlled.one": "{gate}, control {controls}, objetivo {target}",
+  "a11y.controlled.other": "{gate}, controles {controls}, objetivo {target}"
 }
