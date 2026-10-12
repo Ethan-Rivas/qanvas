@@ -3,14 +3,12 @@
   "header.undo": "Deshacer",
   "header.redo": "Rehacer",
   "header.language": "Idioma",
-
   "palette.label": "Compuertas",
   "palette.search": "Buscar compuertas",
   "palette.noMatch": "Ninguna compuerta coincide con “{query}”.",
   "palette.group.basics": "Básicas",
   "palette.group.phaseRotation": "Fase y rotación",
   "palette.group.multiMeasure": "Multiqubit y medición",
-
   "gate.H.name": "Hadamard",
   "gate.H.hint": "Crea una superposición",
   "gate.X.name": "Pauli-X",
@@ -45,10 +43,8 @@
   "gate.CCX.hint": "Invierte un qubit si otros dos están en 1",
   "gate.M.name": "Medición",
   "gate.M.hint": "Lee un 0 o un 1",
-
   "part.control": "control",
   "part.target": "objetivo",
-
   "circuit.label": "Circuito",
   "circuit.qubits.one": "{count} qubit",
   "circuit.qubits.other": "{count} qubits",
@@ -65,24 +61,26 @@
   "circuit.angleHelp": "Por ejemplo pi/2, π/4 o 1.57",
   "circuit.angleInvalid": "Escribe un número o una fracción de pi, como pi/2.",
   "circuit.delete": "Eliminar",
-
   "error.after-measure": "La medición va al final de cada qubit. Pon la compuerta antes de la medición.",
   "error.too-few-qubits": "Esta compuerta necesita más qubits. Primero agrega un qubit.",
   "error.too-many-qubits": "Qanvas trabaja con hasta 12 qubits.",
   "error.other": "Esa compuerta no cabe ahí.",
-
   "dnd.instructions": "Para tomar una compuerta, presiona Espacio o Enter. Usa las flechas para moverte entre las celdas del circuito, presiona Espacio o Enter para soltarla, o Escape para cancelar.",
   "dnd.pickedUp": "Tomaste {gate}.",
   "dnd.over": "{gate} está sobre {cell}.",
   "dnd.notOver": "{gate} no está sobre el circuito.",
   "dnd.dropped": "{gate} quedó en {cell}.",
   "dnd.cancelled": "Cancelado. {gate} no se movió.",
-
   "results.title": "Si midieras ahora",
   "results.atEnd": "al final",
   "results.bitOrder": "Los bits se leen como {order}.",
   "results.topOutcomes": "Se muestran los {shown} resultados más probables de {total}.",
   "results.outcome": "{ket}: {percent}",
   "results.simulatedLocally": "Simulado en tu navegador",
-  "results.simulating": "Simulando…"
+  "results.simulating": "Simulando…",
+  "dnd.roleDescription": "compuerta arrastrable",
+  "notice.dismiss": "Cerrar",
+  "circuit.selected": "Seleccionada: {gate}",
+  "language.en": "English",
+  "language.es": "Español"
 }

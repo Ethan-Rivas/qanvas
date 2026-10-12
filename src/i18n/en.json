@@ -3,14 +3,12 @@
   "header.undo": "Undo",
   "header.redo": "Redo",
   "header.language": "Language",
-
   "palette.label": "Gates",
   "palette.search": "Search gates",
   "palette.noMatch": "No gates match “{query}”.",
   "palette.group.basics": "Basics",
   "palette.group.phaseRotation": "Phase and rotation",
   "palette.group.multiMeasure": "Multi-qubit and measure",
-
   "gate.H.name": "Hadamard",
   "gate.H.hint": "Creates a superposition",
   "gate.X.name": "Pauli-X",
@@ -45,10 +43,8 @@
   "gate.CCX.hint": "Flips one qubit if two others are 1",
   "gate.M.name": "Measure",
   "gate.M.hint": "Reads out 0 or 1",
-
   "part.control": "control",
   "part.target": "target",
-
   "circuit.label": "Circuit",
   "circuit.qubits.one": "{count} qubit",
   "circuit.qubits.other": "{count} qubits",
@@ -65,24 +61,26 @@
   "circuit.angleHelp": "For example pi/2, π/4 or 1.57",
   "circuit.angleInvalid": "Use a number or a fraction of pi, like pi/2.",
   "circuit.delete": "Delete",
-
   "error.after-measure": "Measurements go last on a qubit. Put the gate before the measurement.",
   "error.too-few-qubits": "This gate needs more qubits. Add a qubit first.",
   "error.too-many-qubits": "Qanvas works with up to 12 qubits.",
   "error.other": "That gate doesn't fit there.",
-
   "dnd.instructions": "To pick up a gate, press Space or Enter. Use the arrow keys to move between circuit cells, press Space or Enter to drop it, or Escape to cancel.",
   "dnd.pickedUp": "Picked up {gate}.",
   "dnd.over": "{gate} is over {cell}.",
   "dnd.notOver": "{gate} is not over the circuit.",
   "dnd.dropped": "{gate} placed on {cell}.",
   "dnd.cancelled": "Cancelled. {gate} was not moved.",
-
   "results.title": "If you measured now",
   "results.atEnd": "at the end",
   "results.bitOrder": "Bits read as {order}.",
   "results.topOutcomes": "Showing the {shown} most likely of {total} outcomes.",
   "results.outcome": "{ket}: {percent}",
   "results.simulatedLocally": "Simulated in your browser",
-  "results.simulating": "Simulating…"
+  "results.simulating": "Simulating…",
+  "dnd.roleDescription": "draggable gate",
+  "notice.dismiss": "Dismiss",
+  "circuit.selected": "Selected: {gate}",
+  "language.en": "English",
+  "language.es": "Español"
 }
