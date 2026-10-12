@@ -202,8 +202,8 @@
   "open.fileTitle": "Abrir un archivo",
   "open.fileHint": "Un archivo de Qanvas (.json) o código OpenQASM 2.0 (.qasm).",
   "open.chooseFile": "Elegir un archivo",
-  "open.pasteTitle": "Pegar OpenQASM 2.0",
-  "open.pasteLabel": "Código OpenQASM 2.0",
+  "open.pasteTitle": "Pega código o un enlace",
+  "open.pasteLabel": "Código OpenQASM 2.0 o enlace de Quirk",
   "open.import": "Importar",
   "open.badFile": "Este archivo no es un circuito de Qanvas.",
   "import.error.syntax": "Línea {line}: Qanvas no pudo leer esta instrucción.",
@@ -240,5 +240,10 @@
   "download.qiskitReverse": "Qiskit pone el bit clásico 0 al final de sus cadenas de bits; al invertirlas, q0 queda primero, como en Qanvas.",
   "download.pyqvm": "El simulador incluido en pyQuil. En quantum-lab, \"{qubits}q-qvm\" usa la QVM del laboratorio.",
   "download.outcome": "Resultado (q0 primero)",
-  "download.count": "Conteo"
+  "download.count": "Conteo",
+  "open.pasteHint": "Código OpenQASM 2.0, o un enlace de Quirk o Quirk-E.",
+  "import.quirk.invalid": "Qanvas no pudo leer este enlace de Quirk.",
+  "import.quirk.too-many-qubits": "Este circuito usa {detail} qubits; Qanvas trabaja con hasta 12.",
+  "import.quirk.unsupported": "Qanvas todavía no tiene estas compuertas de Quirk: {detail}. Tu circuito no cambió.",
+  "import.quirk.after-measure": "Hay una compuerta después de una medición en el mismo qubit. En Qanvas, las mediciones van al final."
 }

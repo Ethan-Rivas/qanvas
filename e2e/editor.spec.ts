@@ -141,9 +141,9 @@ test('loads an example and shares it as a link', async ({ page, context }) => {
   await expect(outcome(other, '|111⟩: 50%')).toBeVisible();
 });
 
-test('imports OpenQASM and explains what it cannot read', async ({ page }) => {
+test('imports OpenQASM and Quirk links and explains what it cannot read', async ({ page }) => {
   await page.getByRole('button', { name: 'Open' }).click();
-  const code = page.getByRole('textbox', { name: 'OpenQASM 2.0 code' });
+  const code = page.getByRole('textbox', { name: 'OpenQASM 2.0 code or Quirk link' });
   await code.fill('OPENQASM 2.0;\nqreg q[1];\nu3(0,0,0) q[0];');
   await page.getByRole('button', { name: 'Import' }).click();
   await expect(page.getByRole('alert')).toHaveText("Line 3: Qanvas doesn't have the u3 gate yet.");
@@ -152,6 +152,14 @@ test('imports OpenQASM and explains what it cannot read', async ({ page }) => {
   await page.getByRole('button', { name: 'Import' }).click();
   await expect(page.getByRole('dialog')).toBeHidden();
   await expect(outcome(page, '|11⟩: 50%')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Open' }).click();
+  await code.fill('https://algassert.com/quirk#circuit={"cols":[["H"],["◦","X"]]}');
+  await page.getByRole('button', { name: 'Import' }).click();
+  await expect(page.getByRole('alert')).toHaveText("Qanvas doesn't have these Quirk gates yet: ◦. Your circuit hasn't changed.");
+  await code.fill('https://algassert.com/quirk#circuit=%7B%22cols%22%3A%5B%5B%22X%22%5D%2C%5B%22Measure%22%5D%5D%7D');
+  await page.getByRole('button', { name: 'Import' }).click();
+  await expect(outcome(page, '|1⟩: 100%')).toBeVisible();
 });
 
 test('downloads the circuit as a notebook, a script or OpenQASM', async ({ page }) => {

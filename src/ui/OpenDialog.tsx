@@ -1,12 +1,13 @@
 import { useState, type ChangeEvent } from 'react';
 import { importQasm, type ImportError } from '../code/qasmImport';
+import { importQuirk, looksLikeQuirk, type QuirkResult } from '../code/quirkImport';
 import { useEditor } from '../editor/store';
 import type { MessageKey } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
 import { fromFile, type SharedCircuit } from '../share/share';
 import { Dialog } from './Dialog';
 
-type Problem = { kind: 'bad-file' } | { kind: 'qasm'; error: ImportError };
+type Problem = { kind: 'bad-file' } | { kind: 'qasm'; error: ImportError } | { kind: 'quirk'; error: Extract<QuirkResult, { ok: false }>['error'] };
 
 function looksLikeQasm(name: string, text: string) {
   return name.toLowerCase().endsWith('.qasm') || /^\s*(\/\/[^\n]*\n\s*)*OPENQASM/.test(text);
@@ -23,6 +24,13 @@ export function OpenDialog({ open, onClose }: { open: boolean; onClose: () => vo
     setCode('');
     setProblem(null);
     onClose();
+  }
+
+  function fromPaste(text: string) {
+    if (!looksLikeQuirk(text)) return fromQasm(text);
+    const result = importQuirk(text);
+    if (result.ok) finish({ circuit: result.circuit, exampleId: null });
+    else setProblem({ kind: 'quirk', error: result.error });
   }
 
   function fromQasm(text: string) {
@@ -44,6 +52,7 @@ export function OpenDialog({ open, onClose }: { open: boolean; onClose: () => vo
 
   function message(p: Problem): string {
     if (p.kind === 'bad-file') return t('open.badFile');
+    if (p.kind === 'quirk') return t(`import.quirk.${p.error.code}`, { detail: p.error.detail ?? '' });
     const { code: errorCode, line, detail } = p.error;
     const key: MessageKey = errorCode === 'syntax' && line === undefined ? 'import.error.invalid' : `import.error.${errorCode}`;
     return t(key, { line: line ?? '', detail: detail ?? '' });
@@ -75,6 +84,7 @@ export function OpenDialog({ open, onClose }: { open: boolean; onClose: () => vo
       </section>
       <section className="dialog-section">
         <h3>{t('open.pasteTitle')}</h3>
+        <p className="dialog-intro">{t('open.pasteHint')}</p>
         <label htmlFor="qasm-input" className="visually-hidden">
           {t('open.pasteLabel')}
         </label>
@@ -88,7 +98,7 @@ export function OpenDialog({ open, onClose }: { open: boolean; onClose: () => vo
           onChange={(e) => setCode(e.target.value)}
         />
         <div>
-          <button type="button" className="button button--primary" disabled={!code.trim()} onClick={() => fromQasm(code)}>
+          <button type="button" className="button button--primary" disabled={!code.trim()} onClick={() => fromPaste(code)}>
             {t('open.import')}
           </button>
         </div>

@@ -202,8 +202,8 @@
   "open.fileTitle": "Open a file",
   "open.fileHint": "A Qanvas file (.json) or OpenQASM 2.0 code (.qasm).",
   "open.chooseFile": "Choose a file",
-  "open.pasteTitle": "Paste OpenQASM 2.0",
-  "open.pasteLabel": "OpenQASM 2.0 code",
+  "open.pasteTitle": "Paste code or a link",
+  "open.pasteLabel": "OpenQASM 2.0 code or Quirk link",
   "open.import": "Import",
   "open.badFile": "This file isn't a Qanvas circuit.",
   "import.error.syntax": "Line {line}: Qanvas couldn't read this statement.",
@@ -240,5 +240,10 @@
   "download.qiskitReverse": "Qiskit puts classical bit 0 last in its bitstrings; reversing them puts q0 first, like Qanvas.",
   "download.pyqvm": "pyQuil's built-in simulator. In quantum-lab, \"{qubits}q-qvm\" uses the lab's QVM instead.",
   "download.outcome": "Outcome (q0 first)",
-  "download.count": "Count"
+  "download.count": "Count",
+  "open.pasteHint": "OpenQASM 2.0 code, or a link from Quirk or Quirk-E.",
+  "import.quirk.invalid": "Qanvas couldn't read this Quirk link.",
+  "import.quirk.too-many-qubits": "This circuit uses {detail} qubits; Qanvas works with up to 12.",
+  "import.quirk.unsupported": "Qanvas doesn't have these Quirk gates yet: {detail}. Your circuit hasn't changed.",
+  "import.quirk.after-measure": "A gate comes after a measurement on the same qubit. In Qanvas, measurements go last."
 }
