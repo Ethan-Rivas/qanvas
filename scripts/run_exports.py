@@ -65,11 +65,9 @@ def pyquil_state(code, qubits):
         matrix = QUANTUM_GATES[gate.name]
         if gate.params:
             matrix = matrix(*gate.params)
-        # do_gate ignores modifiers, so S(0).dagger() would run as S; apply them to the matrix instead.
-        for modifier in gate.modifiers:
-            if modifier != "DAGGER":
-                raise ValueError(f"Unexpected modifier {modifier}")
-            matrix = matrix.conj().T
+        # pyQuil's own simulators ignore modifiers such as DAGGER, so an export must never use them.
+        if gate.modifiers:
+            raise ValueError(f"Exported code uses modifiers {gate.modifiers}, which pyQuil's simulators ignore")
         sim.do_gate_matrix(matrix, [q.index for q in gate.qubits])
     # The simulator's wavefunction tensor has one axis per qubit with q0 first, so flattening
     # it puts q0 in the most significant bit, like Qanvas.

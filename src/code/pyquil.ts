@@ -3,7 +3,7 @@ import type { Operation } from '../circuit/model';
 import { angleExpression, measures, operations, usesPi, type CodeLine, type Generator } from './common';
 
 const NAME: Record<string, string> = {
-  H: 'H', X: 'X', Y: 'Y', Z: 'Z', S: 'S', Sdg: 'S', T: 'T', Tdg: 'T',
+  H: 'H', X: 'X', Y: 'Y', Z: 'Z', S: 'S', Sdg: 'PHASE', T: 'T', Tdg: 'PHASE',
   RX: 'RX', RY: 'RY', RZ: 'RZ', P: 'PHASE',
   CNOT: 'CNOT', CZ: 'CZ', SWAP: 'SWAP', CCX: 'CCNOT', M: 'MEASURE',
 };
@@ -15,7 +15,9 @@ function instruction(op: Operation): string {
     const reads = op.targets.map((q) => `MEASURE(${q}, ro[${q}])`);
     return reads.length === 1 ? reads[0] : `[${reads.join(', ')}]`;
   }
-  if (kind === 'Sdg' || kind === 'Tdg') return `${NAME[kind]}(${qubits}).dagger()`;
+  // pyQuil's built-in simulators ignore .dagger(), so S† and T† are written as the phase gates they equal.
+  if (kind === 'Sdg') return `PHASE(-pi/2, ${qubits})  # S†`;
+  if (kind === 'Tdg') return `PHASE(-pi/4, ${qubits})  # T†`;
   if (op.angle !== undefined) return `${NAME[kind]}(${angleExpression(op.angle)}, ${qubits})`;
   return `${NAME[kind]}(${qubits})`;
 }
