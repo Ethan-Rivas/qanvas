@@ -164,7 +164,7 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 **In:**
 
 - **Editable OpenQASM tab:** type OpenQASM 2.0 and the circuit, results and code update after a short pause. The other three tabs stay read-only.
-- **Import Quirk links:** paste a Quirk URL and get the same circuit, for the gates Qanvas has.
+- **Import Quirk links:** paste a Quirk or Quirk-E link and get the same circuit, when it only uses gates Qanvas has. Otherwise nothing changes and a message lists what's missing; a gate is never silently dropped.
 - **Download as:** save the circuit as a ready-to-run notebook (`.ipynb`), a Python script (`.py`) or OpenQASM (`.qasm`), in Qiskit, Cirq or pyQuil. Works on the website too.
 - **Open in notebook** (in quantum-lab): the same notebook, saved straight into the lab's `notebooks/` folder and opened in JupyterLab.
 - **Run with Qiskit Aer** (in quantum-lab): run circuits with more qubits than the browser can, and get sampled counts.
@@ -183,7 +183,7 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 - **Bit order:** the bridge converts Qiskit's counts to Qanvas's order (q0 first) before replying, with a comment, and its tests check the conversion on circuits where the order matters.
 - **Bigger circuits:** with the bridge, the qubit limit rises from 12 to 24. Aer's state for 24 qubits takes 256 MB, which fits Docker Desktop's default memory; 28 would need 4 GB. Above 12 qubits the browser stops simulating: Aer's sampled counts replace the exact histogram, and the amplitudes, Bloch spheres and step-through explanations aren't shown, with a note saying why.
 - **Notebooks:** Qanvas builds the notebook in the browser from its Qiskit, Cirq or pyQuil export: a title, the bit-order note for Qiskit, the circuit, and a cell that runs it and plots the results. Download as and Open in notebook use the same file. The export tests run every generated notebook and script in the quantum-lab image (notebooks with nbconvert) and check that their results agree with Qanvas's.
-- **Quirk links:** Quirk's JSON format is read in the browser, mapping its gate names to Qanvas's and stopping with a clear message, as the OpenQASM importer does, at gates Qanvas lacks (such as anti-controls). Quirk's own bit order needs checking against Qanvas's, with a test.
+- **Quirk links:** Quirk's JSON format is read in the browser, mapping its gate names to Qanvas's and stopping with a clear message, as the OpenQASM importer does, at gates Qanvas lacks (such as anti-controls). Display cells (Bloch, Chance, Amps, Density) don't change the state and are skipped. Quirk-E's link format needs checking against Quirk's, and Quirk's bit order against Qanvas's, with a test.
 
 **Milestones:**
 
@@ -207,7 +207,13 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 - **0.1.x:** fixes from the physics and Spanish reviews and from student feedback, as small patch releases.
 - **0.2:** see the 0.2 plan above.
 - **0.3:** noise models (depolarizing, readout error) with a side-by-side ideal vs noisy view; mid-circuit measurement and classical control.
-- **0.4:** custom gates and subcircuits; lesson paths that chain several examples.
+- **0.4:** a gate toolkit and lessons. Qanvas isn't meant to be a Quirk clone: it takes the gates that help someone learn or export working code, and leaves out Quirk's sandbox tools (arithmetic and input registers, time-animated gates, gradients, parity and sampling probes, postselection), which are hard to explain step by step and don't turn into clean framework code.
+  - Any gate with controls, more than two controls, and controls that fire on 0.
+  - √X, √Y and powers such as X^t.
+  - QFT and QFT† as one block.
+  - Custom gates from part of a circuit (subcircuits) or from a matrix checked to be unitary. OpenQASM 2.0 can't express a matrix gate, so that export says so.
+  - Lesson paths that chain several examples.
+  - **Check:** a 5-qubit Grover search with an oracle subcircuit and many-control gates, as Quirk's gallery shows it, is built in Qanvas, exported, and matches Qiskit. Each new gate also lets more Quirk links import.
 - **0.5:** import real notebooks. In quantum-lab, a Qiskit notebook runs in a separate process with a time limit and a warning first (it runs the notebook's own code), and you pick one of the circuits it builds. Qiskit rewrites gates Qanvas lacks into ones it has; more than 24 qubits or unbound parameters get a clear message. Circuits with hundreds of steps get a compact view, a slider that still works and a performance check at that size. It comes after 0.3 and 0.4 because real notebooks often use mid-circuit measurement, and long rewritten circuits need subcircuits to stay readable.
 - **Later:** run on real IBM hardware through quantum-lab; a native desktop app if the installable web app isn't enough; collaboration.
 
