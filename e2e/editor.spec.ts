@@ -74,6 +74,34 @@ test('builds a Bell state with the keyboard only', async ({ page }) => {
   await expect(outcome(page, '|100⟩: 50%')).toBeVisible();
 });
 
+test('steps through a circuit with explanations and the matching code line', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await drag(page, paletteGate(page, /Hadamard/), cell(page, 0, 0));
+  await drag(page, paletteGate(page, /^CNOT/), cell(page, 1, 0));
+  await expect(outcome(page, '|110⟩: 50%')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'A conditional flip' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Previous step' }).click();
+  await expect(page.getByText('after step 1')).toBeVisible();
+  await expect(outcome(page, '|100⟩: 50%')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Superposition' })).toBeVisible();
+  await expect(page.locator('.code-line[data-current]')).toHaveText(/^qc\.h\(0\)/);
+  await expect(page.getByRole('img', { name: /^q0: \|\+⟩/ })).toBeVisible();
+
+  await page.getByRole('slider', { name: 'Step through the circuit' }).press('Home');
+  await expect(page.getByText('at the start')).toBeVisible();
+  await expect(outcome(page, '|000⟩: 100%')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Qiskit' }).press('ArrowRight');
+  await expect(page.getByRole('tab', { name: 'Cirq' })).toBeFocused();
+  await page.getByRole('button', { name: 'Copy' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Copied' })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('cirq.Moment(cirq.CNOT(q[0], q[1])),');
+
+  await page.getByRole('switch', { name: 'Learn mode' }).uncheck();
+  await expect(page.locator('.callout')).toHaveCount(0);
+});
+
 test('switches the interface to Spanish', async ({ page }) => {
   await page.getByRole('button', { name: 'Español' }).click();
   await expect(page.getByRole('heading', { name: 'Si midieras ahora' })).toBeVisible();
@@ -89,6 +117,9 @@ test('fits a phone screen without sideways scrolling', async ({ page }) => {
 test('has no automatically detectable accessibility issues', async ({ page }) => {
   await drag(page, paletteGate(page, /Hadamard/), cell(page, 0, 0));
   await drag(page, paletteGate(page, /^Rx/), cell(page, 0, 1));
+  await drag(page, paletteGate(page, /^CNOT/), cell(page, 1, 0));
+  await page.getByRole('button', { name: 'Previous step' }).click();
+  await page.getByText('Amplitudes').click();
   const { violations } = await new AxeBuilder({ page }).analyze();
   expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`)).toEqual([]);
 });
