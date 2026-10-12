@@ -23,6 +23,8 @@ def run_script(code):
     os.unlink(file.name)
     if done.returncode != 0:
         raise RuntimeError(done.stderr.strip().splitlines()[-1])
+    if done.stderr.strip():
+        raise RuntimeError(f"Printed warnings or errors: {done.stderr.strip()[:300]}")
     return ast.literal_eval(done.stdout.strip().splitlines()[-1])
 
 
@@ -32,6 +34,10 @@ def run_notebook(text):
     # IPC keeps the kernel off TCP, which it otherwise warns about on every start.
     NotebookClient(notebook, timeout=300, km=KernelManager(kernel_name="python3", transport="ipc", ip=os.path.join(tempfile.mkdtemp(), "kernel"))).execute()
     counts_cell = next(cell for cell in notebook.cells if cell.cell_type == "code" and cell.source.endswith("counts"))
+    # Students read anything on stderr, such as a deprecation warning, as the notebook failing.
+    noise = [output.text for cell in notebook.cells if cell.cell_type == "code" for output in cell.outputs if output.get("name") == "stderr"]
+    if noise:
+        raise RuntimeError(f"Printed warnings or errors: {noise[0][:300]}")
     result = next(output for output in counts_cell.outputs if output.output_type == "execute_result")
     plots = [output for output in notebook.cells[-1].outputs if "image/png" in output.get("data", {})]
     if not plots:

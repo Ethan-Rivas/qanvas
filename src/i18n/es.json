@@ -256,5 +256,6 @@
   "lab.sending": "Enviando a JupyterLab…",
   "lab.saved": "Se guardó como {path} en la carpeta de notebooks del laboratorio.",
   "lab.openLink": "Ábrelo en JupyterLab",
-  "lab.failed": "No se pudo enviar el notebook al laboratorio. Puedes descargarlo en su lugar."
+  "lab.failed": "No se pudo enviar el notebook al laboratorio. Puedes descargarlo en su lugar.",
+  "download.pyquil5": "pyQuil 4.22 avisa sobre cambios que vienen en pyQuil 5; no afectan este código."
 }

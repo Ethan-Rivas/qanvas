@@ -47,12 +47,16 @@ function runCode(format: PythonFormat, circuit: Circuit, t: Translate): string[]
       ];
     case 'pyquil':
       return [
+        'import warnings',
+        '',
         'from pyquil import get_qc',
         ...(measures(circuit) ? [] : ['from pyquil.gates import MEASURE']),
         '',
         counted,
         ...measureAll,
         ...(measures(circuit) ? [] : [`ro = program.declare("ro", "BIT", ${circuit.qubits})`, 'program += [MEASURE(q, ro[q]) for q in measured]']),
+        `# ${t('download.pyquil5')}`,
+        'warnings.filterwarnings("ignore", message=".*pyQuil v5")',
         `# ${t('download.pyqvm', { qubits: circuit.qubits })}`,
         `qc = get_qc("${circuit.qubits}q-pyqvm")`,
         `program.wrap_in_numshots_loop(${SHOTS})`,
