@@ -87,7 +87,12 @@ def run(case):
             results[fmt] = {"re": state.real.tolist(), "im": state.imag.tolist()}
         except Exception as error:  # reported per case so one failure doesn't hide the rest
             results[fmt] = {"error": f"{type(error).__name__}: {error}"}
-    return {"name": case["name"], "results": results}
+    # OpenQASM written by Qiskit itself, which Qanvas must be able to import.
+    try:
+        qiskit_qasm = qasm2.dumps(run_python(case["code"]["qiskit"], "qiskit")["qc"])
+    except Exception as error:
+        qiskit_qasm = f"error: {type(error).__name__}: {error}"
+    return {"name": case["name"], "results": results, "qiskitQasm": qiskit_qasm}
 
 
 if __name__ == "__main__":

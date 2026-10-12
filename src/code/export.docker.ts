@@ -7,6 +7,7 @@ import type { Circuit } from '../circuit/model';
 import { translator } from '../i18n/i18n';
 import { finalState } from '../sim/simulator';
 import { CODE_FORMATS, codeText, generateCode } from './generate';
+import { importQasm } from './qasmImport';
 
 const TOLERANCE = 1e-9;
 const ROOT = resolve(__dirname, '../..');
@@ -39,12 +40,19 @@ test(`exported code runs in Python and matches Qanvas on ${cases.length} circuit
     'python', 'scripts/run_exports.py', '/work/cases.json', '/work/results.json',
   ], { stdio: 'inherit' });
 
-  const output: { name: string; results: Record<string, Result> }[] = JSON.parse(readFileSync(join(work, 'results.json'), 'utf8'));
+  const output: { name: string; results: Record<string, Result>; qiskitQasm: string }[] = JSON.parse(readFileSync(join(work, 'results.json'), 'utf8'));
   const failures: string[] = [];
-  output.forEach(({ name, results }, i) => {
+  output.forEach(({ name, results, qiskitQasm }, i) => {
     const expected = finalState(cases[i].circuit);
-    for (const format of CODE_FORMATS) {
+    const imported = importQasm(qiskitQasm);
+    if (!imported.ok) failures.push(`${name} [import from Qiskit]: ${JSON.stringify(imported.error)}`);
+    else {
+      const state = finalState(imported.circuit);
+      results['import from Qiskit'] = { re: Array.from(state.re), im: Array.from(state.im) };
+    }
+    for (const format of [...CODE_FORMATS, 'import from Qiskit']) {
       const result = results[format];
+      if (!result) continue;
       if ('error' in result) {
         failures.push(`${name} [${format}]: ${result.error}`);
         continue;
