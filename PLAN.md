@@ -163,21 +163,21 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 
 **In:**
 
-- **Editable OpenQASM tab:** type OpenQASM 2.0 and the circuit, results and code update after a short pause. The other three tabs stay read-only.
+- **Editable OpenQASM tab:** type OpenQASM 2.0 and the circuit, results and code update after a short pause. On the website and in plain Docker the other three tabs stay read-only, with a note at the bottom that they can be edited in quantum-lab.
 - **Import Quirk links:** paste a Quirk or Quirk-E link and get the same circuit, when it only uses gates Qanvas has. Otherwise nothing changes and a message lists what's missing; a gate is never silently dropped.
 - **Download as:** save the circuit as a ready-to-run notebook (`.ipynb`), a Python script (`.py`) or OpenQASM (`.qasm`), in Qiskit, Cirq or pyQuil. Works on the website too.
 - **Open in notebook** (in quantum-lab): the same notebook, saved straight into the lab's `notebooks/` folder and opened in JupyterLab.
 - **Run with Qiskit Aer** (in quantum-lab): run circuits with more qubits than the browser can, and get sampled counts.
-- **Import Qiskit code** (in quantum-lab): paste a Python snippet that builds a `QuantumCircuit` and get the circuit.
+- **Edit Qiskit, Cirq and pyQuil code** (in quantum-lab): the three Python tabs become editable. Real Python runs the code, so loops, variables and functions work, and the diagram shows the circuit the code builds. The code you typed stays as you wrote it until you change the diagram, which rewrites it as Qanvas's flat version, with a note saying so first.
 
-**Out of 0.2:** noise models and mid-circuit measurement (0.3), importing whole notebooks (0.5), and importing Cirq or pyQuil code.
+**Out of 0.2:** noise models and mid-circuit measurement (0.3), importing whole notebooks (0.5), and reading Python code on the website (it needs Python to run, so it lives in the lab).
 
 **Technical design:**
 
 - **The lab bridge:** a small Python web service in quantum-lab, `lab-bridge`, built from the lab's own image (Qiskit and Aer are already installed) and given the `notebooks/` folder. It answers three requests:
   - `POST /run` takes OpenQASM 2.0 and a shot count, runs it on Aer and returns counts.
   - `POST /notebook` takes a notebook Qanvas generated, saves it under `notebooks/qanvas/` and returns its path.
-  - `POST /import/qiskit` runs the pasted Python in a separate process with a time limit and returns the circuit as OpenQASM, which Qanvas reads with its existing importer.
+  - `POST /import` takes Qiskit, Cirq or pyQuil code, runs it in a separate process with a time limit and returns the circuit it builds as OpenQASM, which Qanvas reads with its existing importer. Qiskit and Cirq write OpenQASM themselves; for pyQuil the bridge converts the program's instructions, which is short for the gates Qanvas has. Code that times out or fails returns its error, and the current circuit stays.
 - **Same address, no CORS:** inside quantum-lab, Qanvas's nginx forwards `/api/` to the bridge, so the page only ever talks to its own address. The image turns that forwarding on only when an environment variable such as `QANVAS_BRIDGE_URL` is set, so the same image still works on its own and the website never sees it.
 - **Discovery:** at start, Qanvas asks `./api/health`. If it answers, the lab-only buttons appear; on the website and in plain Docker they don't.
 - **Bit order:** the bridge converts Qiskit's counts to Qanvas's order (q0 first) before replying, with a comment, and its tests check the conversion on circuits where the order matters.
@@ -187,17 +187,17 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 
 **Milestones:**
 
-1. **Code in and out:** the editable OpenQASM tab, Quirk link import and Download as, in Qanvas only.
+1. **Code in and out:** the editable OpenQASM tab with the note under the Python tabs, Quirk link import and Download as, in Qanvas only.
    - **Check:** a circuit typed as OpenQASM or pasted from Quirk shows the same results as one built by hand, invalid input never breaks the current circuit, and every downloaded notebook and script runs in the quantum-lab image with results that agree with Qanvas.
 2. **The lab bridge:** the bridge service in quantum-lab, the nginx forwarding and discovery in Qanvas, and Open in notebook.
    - **Check:** in quantum-lab, Open in notebook creates a notebook that runs with Shift + Enter and gives the same results as Qanvas; on the website the button doesn't appear.
-3. **Run with Qiskit Aer and import Qiskit code.**
-   - **Check:** a circuit above 12 qubits runs on Aer with the bit order right, and a Qiskit snippet imports with the same final state.
+3. **Run with Qiskit Aer, and edit Qiskit, Cirq and pyQuil code in the lab.**
+   - **Check:** a circuit above 12 qubits runs on Aer with the bit order right; in each language, a snippet with a loop shows the right circuit with the same final state, and the code stays as typed.
 
 **Open questions for 0.2:**
 
 - [x] The qubit limit with Aer is 24 for now (decided Oct 12, 2026). Rows get more compact above 12 qubits so the circuit stays readable.
-- [x] Importing Qiskit code works only in quantum-lab, where real Python runs it, so any snippet that runs in a notebook imports. A browser-side reader for simple code on the website can come later if students ask for it. (Decided Oct 12, 2026.)
+- [x] Editing Qiskit, Cirq and pyQuil code works only in quantum-lab, where real Python runs it, so any code that runs in a notebook works, loops included. The website keeps those tabs read-only and points to the lab; it doesn't get a partial Python reader. (Decided Oct 12, 2026.)
 - [ ] What the 0.1 reviews and feedback from students change about this list.
 
 ## After 0.1, and open questions

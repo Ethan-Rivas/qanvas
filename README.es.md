@@ -76,7 +76,7 @@ npm run icons        # genera public/icons a partir de los tokens de diseño
 
 ## Próximamente
 
-- [ ] **0.2:** editar el código OpenQASM directamente; importar enlaces de Quirk; descargar el circuito como notebook, script de Python u OpenQASM; "Abrir en notebook" para mandarlo a JupyterLab; correr circuitos más grandes con Qiskit Aer e importar código de Qiskit a través de quantum-lab.
+- [ ] **0.2:** editar el código OpenQASM directamente; importar enlaces de Quirk; descargar el circuito como notebook, script de Python u OpenQASM; "Abrir en notebook" para mandarlo a JupyterLab; correr circuitos más grandes con Qiskit Aer e editar código de Qiskit, Cirq y pyQuil en quantum-lab.
 - [ ] **0.3:** modelos de ruido (despolarización, error de lectura) con una vista ideal contra ruidosa; medición a mitad del circuito.
 - [ ] **0.4:** compuertas con cualquier número de controles (incluidos controles en 0), √X y √Y, bloques de QFT, compuertas personalizadas a partir de un circuito o de una matriz; lecciones que encadenan varios ejemplos.
 - [ ] **0.5:** importar notebooks reales de Qiskit y elegir uno de sus circuitos, incluso los largos, con cientos de pasos.
