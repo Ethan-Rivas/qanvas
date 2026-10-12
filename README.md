@@ -31,7 +31,7 @@ Qanvas writes kets with q0 first (leftmost), like Cirq and Quirk. Qiskit writes 
 
 ## Run it in quantum-lab
 
-Once quantum-lab includes it, `docker compose up` starts Qanvas next to JupyterLab at **http://127.0.0.1:8080**. Build a circuit, copy the code and paste it into a notebook. The changes quantum-lab needs are in [docs/quantum-lab.md](docs/quantum-lab.md).
+In [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab), `docker compose up` starts Qanvas next to JupyterLab at **http://127.0.0.1:8080**. Build a circuit, copy the code and paste it into a notebook. [docs/quantum-lab.md](docs/quantum-lab.md) describes how it's set up there.
 
 To run only Qanvas with Docker:
 

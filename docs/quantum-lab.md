@@ -1,6 +1,6 @@
 # Adding Qanvas to quantum-lab
 
-Qanvas ships a small web-server image, `ghcr.io/ethan-rivas/qanvas`, built from the `Dockerfile` in this repository and published for each release tag. These are the changes quantum-lab needs to run it as one more service. They belong in the quantum-lab repository, not here.
+Qanvas ships a small web-server image, `ghcr.io/ethan-rivas/qanvas`, built from the `Dockerfile` in this repository and published for each release tag. quantum-lab runs it as one more service since its commit `437c091`. This page records what that takes, so the setup can be repeated or updated for a new Qanvas version (change the image tag in quantum-lab's `docker-compose.yml`). These changes belong in the quantum-lab repository, not here.
 
 ## Before you start
 
