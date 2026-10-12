@@ -13,7 +13,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GateKind } from '../circuit/gates';
 import { useEditor } from '../editor/store';
 import { useT } from '../i18n/useT';
+import { useSimulation } from '../sim/useSimulation';
 import { CircuitView } from './CircuitView';
+import { CodePanel } from './CodePanel';
 import { announcements, collisionDetection, gridKeyboardCoordinates, type DragData, type DropData } from './dnd';
 import { GateIcon } from './GateGlyph';
 import { Header } from './Header';
@@ -31,6 +33,8 @@ function inCircuit(target: EventTarget | null) {
 export function App() {
   const t = useT();
   const language = useEditor((s) => s.language);
+  const circuit = useEditor((s) => s.circuit);
+  const { result, pending } = useSimulation(circuit);
   const circuitRef = useRef<HTMLElement>(null);
   const [dragging, setDragging] = useState<GateKind | null>(null);
   const [focusTarget, setFocusTarget] = useState<string | null>(null);
@@ -121,9 +125,10 @@ export function App() {
         <div className="workspace">
           <Palette />
           <main className="main">
-            <CircuitView ref={circuitRef} />
+            <CircuitView ref={circuitRef} result={result} />
+            <CodePanel />
           </main>
-          <Results />
+          <Results result={result} pending={pending} />
         </div>
       </div>
       <DragOverlay dropAnimation={null}>{dragging && <GateIcon kind={dragging} size="large" />}</DragOverlay>

@@ -8,6 +8,8 @@
   --on-brand: #FFFFFF;
 
   --quantum-data: #0F7B6C;
+  --bloch-fill: #F3FAF8;
+  --bloch-line: #BFDFD8;
   --measure: #E2A75A;
 
   --ink: #1D1F1E;
@@ -26,6 +28,9 @@
   --notice-bg: #FFF9EE;
   --notice-border: #E1C79B;
   --notice-ink: #7A4B00;
+
+  --code-keyword: #7A3FB0;
+  --code-number: #A04A00;
 
   --gate-hadamard-border: #8A8AE0;
   --gate-hadamard-bg: #EEEEFC;

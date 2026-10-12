@@ -7,6 +7,7 @@ import type { Language } from '../i18n/i18n';
 
 const HISTORY_LIMIT = 200;
 const LANGUAGE_KEY = 'qanvas.language';
+const LEARN_KEY = 'qanvas.learnMode';
 
 export interface EditorState {
   circuit: Circuit;
@@ -16,6 +17,9 @@ export interface EditorState {
   clipboard: Operation | null;
   notice: EditError | null;
   language: Language;
+  learnMode: boolean;
+  /** The step shown by the step-through slider; null follows the end of the circuit as it grows. */
+  step: number | null;
 
   placeGate(kind: GateKind, cell: Cell): OpLocation | null;
   movePart(from: OpLocation & { qubit: number }, to: Cell): OpLocation | null;
@@ -30,16 +34,37 @@ export interface EditorState {
   select(at: OpLocation | null): void;
   dismissNotice(): void;
   setLanguage(language: Language): void;
+  setLearnMode(on: boolean): void;
+  setStep(step: number | null): void;
+}
+
+// Storage can be blocked (private windows, previews); every setting then falls back to its default.
+function load(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function save(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Not remembering the choice is fine.
+  }
 }
 
 function initialLanguage(): Language {
-  try {
-    const saved = localStorage.getItem(LANGUAGE_KEY);
-    if (saved === 'en' || saved === 'es') return saved;
-  } catch {
-    // Storage can be blocked (private windows, previews); fall back to the browser language.
-  }
+  const saved = load(LANGUAGE_KEY);
+  if (saved === 'en' || saved === 'es') return saved;
   return typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('es') ? 'es' : 'en';
+}
+
+/** The step to show: `step` when set, otherwise the end of the circuit. */
+export function currentStep(state: Pick<EditorState, 'step' | 'circuit'>): number {
+  const end = state.circuit.columns.length;
+  return state.step === null ? end : Math.min(state.step, end);
 }
 
 export const EMPTY_CIRCUIT: Circuit = { qubits: 3, columns: [] };
@@ -71,6 +96,8 @@ export const useEditor = create<EditorState>()((set, get) => {
     clipboard: null,
     notice: null,
     language: initialLanguage(),
+    learnMode: load(LEARN_KEY) !== 'off',
+    step: null,
 
     placeGate: (kind, cell) => apply(edits.placeGate(get().circuit, kind, cell)),
     movePart: (from, to) => apply(edits.movePart(get().circuit, from, to)),
@@ -107,12 +134,17 @@ export const useEditor = create<EditorState>()((set, get) => {
     dismissNotice: () => set({ notice: null }),
 
     setLanguage(language) {
-      try {
-        localStorage.setItem(LANGUAGE_KEY, language);
-      } catch {
-        // Not remembering the choice is fine.
-      }
+      save(LANGUAGE_KEY, language);
       set({ language });
+    },
+
+    setLearnMode(learnMode) {
+      save(LEARN_KEY, learnMode ? 'on' : 'off');
+      set({ learnMode });
+    },
+
+    setStep(step) {
+      set({ step: step === null || step >= get().circuit.columns.length ? null : Math.max(0, step) });
     },
   };
 });

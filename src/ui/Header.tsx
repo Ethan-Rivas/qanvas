@@ -7,7 +7,8 @@ export function Header() {
   const language = useEditor((s) => s.language);
   const canUndo = useEditor((s) => s.past.length > 0);
   const canRedo = useEditor((s) => s.future.length > 0);
-  const { undo, redo, setLanguage } = useEditor.getState();
+  const learnMode = useEditor((s) => s.learnMode);
+  const { undo, redo, setLanguage, setLearnMode } = useEditor.getState();
 
   return (
     <header className="header">
@@ -32,6 +33,11 @@ export function Header() {
           <path d="M20 9H9a5 5 0 0 0 0 10h3" />
         </svg>
       </button>
+      <label className="learn-toggle">
+        <input type="checkbox" role="switch" checked={learnMode} onChange={(e) => setLearnMode(e.target.checked)} />
+        <span className="switch" aria-hidden="true" />
+        {t('header.learnMode')}
+      </label>
       <div role="group" aria-label={t('header.language')} className="segmented">
         {LANGUAGES.map((l) => (
           <button key={l} type="button" lang={l} aria-label={t(`language.${l}`)} aria-pressed={l === language} onClick={() => setLanguage(l)}>

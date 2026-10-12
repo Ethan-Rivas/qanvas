@@ -1,6 +1,7 @@
 import { useDraggable } from '@dnd-kit/core';
 import { useState } from 'react';
 import { GATE_SYMBOL, type GateKind } from '../circuit/gates';
+import { useEditor } from '../editor/store';
 import type { MessageKey } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
 import type { DragData } from './dnd';
@@ -18,6 +19,7 @@ function normalize(text: string) {
 
 function PaletteGate({ kind, layout }: { kind: GateKind; layout: 'cards' | 'grid' }) {
   const t = useT();
+  const learnMode = useEditor((s) => s.learnMode);
   const data: DragData = { source: 'palette', kind };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `palette:${kind}`, data });
   const name = t(`gate.${kind}.name`);
@@ -44,7 +46,7 @@ function PaletteGate({ kind, layout }: { kind: GateKind; layout: 'cards' | 'grid
       <GateIcon kind={kind} />
       <span className="palette-card-text">
         <span className="palette-card-name">{name}</span>
-        <span className="palette-card-hint">{hint}</span>
+        {learnMode && <span className="palette-card-hint">{hint}</span>}
       </span>
     </button>
   );

@@ -1,14 +1,16 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { forwardRef, useEffect, useState, type ReactNode } from 'react';
+import { forwardRef, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { formatAngle, parseAngle } from '../circuit/angle';
 import type { EditError, OpLocation } from '../circuit/edits';
 import { hasAngle, kindOf, type GateKind } from '../circuit/gates';
 import { operationQubits, type Circuit, type Operation } from '../circuit/model';
-import { useEditor } from '../editor/store';
+import { currentStep, useEditor } from '../editor/store';
 import { pluralKey, type MessageKey, type Translate } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
+import type { SimulationResult } from '../sim/useSimulation';
 import { cellId, type DragData, type DropData } from './dnd';
 import { PartGlyph, type PartShape } from './GateGlyph';
+import { StepCallout, Stepper } from './Stepper';
 
 const MIN_COLUMNS = 6;
 
@@ -58,11 +60,21 @@ function partLabel(t: Translate, part: Part): string {
   return operationQubits(part.op).length > 1 ? t('circuit.gatePart', { ...values, part: t(`part.${part.role}`) }) : t('circuit.gate', values);
 }
 
-function Cell({ column, qubit, children }: { column: number; qubit: number; children?: ReactNode }) {
+type Timeline = 'past' | 'future';
+
+function Cell({ column, qubit, timeline, children }: { column: number; qubit: number; timeline: Timeline; children?: ReactNode }) {
   const data: DropData = { column, qubit };
   const { setNodeRef, isOver } = useDroppable({ id: cellId(column, qubit), data });
   return (
-    <div ref={setNodeRef} className="cell" data-column={column} data-qubit={qubit} data-over={isOver || undefined} style={{ gridColumn: column + 2, gridRow: qubit + 1 }}>
+    <div
+      ref={setNodeRef}
+      className="cell"
+      data-column={column}
+      data-qubit={qubit}
+      data-timeline={timeline}
+      data-over={isOver || undefined}
+      style={{ gridColumn: column + 2, gridRow: qubit + 1 }}
+    >
       {children}
     </div>
   );
@@ -168,19 +180,38 @@ function Inspector({ circuit, onDeleted }: { circuit: Circuit; onDeleted: () => 
   );
 }
 
-export const CircuitView = forwardRef<HTMLElement>(function CircuitView(_, ref) {
+export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | null }>(function CircuitView({ result }, ref) {
   const t = useT();
   const language = useEditor((s) => s.language);
   const circuit = useEditor((s) => s.circuit);
   const selection = useEditor((s) => s.selection);
   const notice = useEditor((s) => s.notice);
+  const learnMode = useEditor((s) => s.learnMode);
+  const step = useEditor(currentStep);
+  const stepping = useEditor((s) => s.step !== null);
   const { addQubit, removeQubit, dismissNotice } = useEditor.getState();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const parts = partsOf(circuit);
   const columnCount = Math.max(circuit.columns.length + 1, MIN_COLUMNS);
   const qubits = Array.from({ length: circuit.qubits }, (_, q) => q);
   const isSelected = (p: Part) => selection?.column === p.column && selection.index === p.index;
   const focusSelf = () => (ref && 'current' in ref ? ref.current?.focus() : undefined);
+  const highlight = learnMode || stepping;
+  const timeline = (c: number): Timeline => (c >= step && c < circuit.columns.length ? 'future' : 'past');
+
+  // Keeps the current column visible while stepping through a wide circuit.
+  useEffect(() => {
+    if (!stepping || step === 0) return;
+    const cell = scrollRef.current?.querySelector<HTMLElement>(`.cell[data-column="${step - 1}"]`);
+    const scroller = scrollRef.current;
+    if (!cell || !scroller) return;
+    const left = cell.offsetLeft - scroller.offsetLeft;
+    if (left < scroller.scrollLeft || left + cell.offsetWidth > scroller.scrollLeft + scroller.clientWidth) {
+      scroller.scrollLeft = left - scroller.clientWidth / 2 + cell.offsetWidth / 2;
+    }
+  }, [step, stepping]);
 
   return (
     <section ref={ref} className="circuit-area" aria-label={t('circuit.label')} tabIndex={-1}>
@@ -206,8 +237,12 @@ export const CircuitView = forwardRef<HTMLElement>(function CircuitView(_, ref) 
         </button>
       </div>
 
-      <div className="circuit-card">
-        <div className="circuit-scroll">
+      <div ref={cardRef} className="circuit-card" style={{ '--step': step } as CSSProperties}>
+        <div
+          ref={scrollRef}
+          className="circuit-scroll"
+          onScroll={(e) => cardRef.current?.style.setProperty('--scroll-x', `${e.currentTarget.scrollLeft}px`)}
+        >
           <div className="circuit-grid" style={{ gridTemplateColumns: `var(--label-width) repeat(${columnCount}, var(--cell-width))` }}>
             {qubits.map((q) => (
               <div key={`label-${q}`} className="qubit-label" style={{ gridRow: q + 1, gridColumn: 1 }}>
@@ -231,6 +266,10 @@ export const CircuitView = forwardRef<HTMLElement>(function CircuitView(_, ref) 
               </div>
             ))}
 
+            {highlight && step > 0 && (
+              <div className="step-highlight" aria-hidden="true" style={{ gridColumn: step + 1, gridRow: `1 / ${circuit.qubits + 1}` }} />
+            )}
+
             {circuit.columns.map((column, c) =>
               column.map((op, i) => {
                 const qs = operationQubits(op);
@@ -239,6 +278,7 @@ export const CircuitView = forwardRef<HTMLElement>(function CircuitView(_, ref) 
                   <div
                     key={`link-${c}-${i}`}
                     className="link"
+                    data-timeline={timeline(c)}
                     aria-hidden="true"
                     style={{ gridColumn: c + 2, gridRow: `${Math.min(...qs) + 1} / ${Math.max(...qs) + 2}` }}
                   />
@@ -250,7 +290,7 @@ export const CircuitView = forwardRef<HTMLElement>(function CircuitView(_, ref) 
               qubits.map((q) => {
                 const part = parts.get(`${c}:${q}`);
                 return (
-                  <Cell key={`${c}:${q}`} column={c} qubit={q}>
+                  <Cell key={`${c}:${q}`} column={c} qubit={q} timeline={timeline(c)}>
                     {part && <PartButton part={part} selected={isSelected(part)} />}
                   </Cell>
                 );
@@ -258,7 +298,9 @@ export const CircuitView = forwardRef<HTMLElement>(function CircuitView(_, ref) 
             )}
           </div>
         </div>
+        {learnMode && result && step > 0 && <StepCallout result={result} step={step} />}
         <Inspector circuit={circuit} onDeleted={focusSelf} />
+        {circuit.columns.length > 0 && <Stepper />}
       </div>
     </section>
   );

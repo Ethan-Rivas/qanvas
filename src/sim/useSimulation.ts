@@ -1,16 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Circuit } from '../circuit/model';
+import type { StateVector } from './simulator';
 import type { SimulationRequest, SimulationResponse } from './worker';
 
+/** Every step's state for `circuit`, which is kept so the states and the circuit always agree. */
 export interface SimulationResult {
-  qubits: number;
-  probabilities: Float64Array;
+  circuit: Circuit;
+  re: Float64Array;
+  im: Float64Array;
+}
+
+export function stateAt(result: SimulationResult, step: number): StateVector {
+  const { qubits } = result.circuit;
+  const size = 1 << qubits;
+  const k = Math.min(step, result.circuit.columns.length);
+  return { qubits, re: result.re.subarray(k * size, (k + 1) * size), im: result.im.subarray(k * size, (k + 1) * size) };
 }
 
 /** Runs the simulator off the main thread and returns the latest result for `circuit`. */
 export function useSimulation(circuit: Circuit): { result: SimulationResult | null; pending: boolean } {
   const worker = useRef<Worker | null>(null);
-  const latest = useRef(0);
+  const latest = useRef({ id: 0, circuit });
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [pending, setPending] = useState(true);
 
@@ -19,13 +29,13 @@ export function useSimulation(circuit: Circuit): { result: SimulationResult | nu
     w.onmessage = (event: MessageEvent<SimulationResponse>) => {
       const response = event.data;
       // Edits can arrive faster than results; only the newest request's answer is shown.
-      if (response.id !== latest.current) return;
+      if (response.id !== latest.current.id) return;
       setPending(false);
       if ('error' in response) {
         console.error(response.error);
         return;
       }
-      setResult({ qubits: response.qubits, probabilities: response.probabilities });
+      setResult({ circuit: latest.current.circuit, re: response.re, im: response.im });
     };
     worker.current = w;
     return () => {
@@ -35,9 +45,9 @@ export function useSimulation(circuit: Circuit): { result: SimulationResult | nu
   }, []);
 
   useEffect(() => {
-    const id = ++latest.current;
+    latest.current = { id: latest.current.id + 1, circuit };
     setPending(true);
-    worker.current?.postMessage({ id, circuit } satisfies SimulationRequest);
+    worker.current?.postMessage({ id: latest.current.id, circuit } satisfies SimulationRequest);
   }, [circuit]);
 
   return { result, pending };
