@@ -108,8 +108,8 @@ export function setAngle(circuit: Circuit, at: OpLocation, angle: number): EditR
   return finish(circuit.qubits, columns, at);
 }
 
-export function addQubit(circuit: Circuit): EditResult {
-  if (circuit.qubits >= MAX_QUBITS) return { ok: false, error: 'too-many-qubits' };
+export function addQubit(circuit: Circuit, limit = MAX_QUBITS): EditResult {
+  if (circuit.qubits >= limit) return { ok: false, error: 'too-many-qubits' };
   return { ok: true, circuit: { ...circuit, qubits: circuit.qubits + 1 } };
 }
 

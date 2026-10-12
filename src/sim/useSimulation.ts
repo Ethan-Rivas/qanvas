@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Circuit } from '../circuit/model';
+import { BROWSER_QUBITS, type Circuit } from '../circuit/model';
 import type { StateVector } from './simulator';
 import type { SimulationRequest, SimulationResponse } from './worker';
 
@@ -46,6 +46,12 @@ export function useSimulation(circuit: Circuit): { result: SimulationResult | nu
 
   useEffect(() => {
     latest.current = { id: latest.current.id + 1, circuit };
+    // Every step's state of a larger circuit doesn't fit in the browser; quantum-lab runs those on Aer.
+    if (circuit.qubits > BROWSER_QUBITS) {
+      setResult(null);
+      setPending(false);
+      return;
+    }
     setPending(true);
     worker.current?.postMessage({ id: latest.current.id, circuit } satisfies SimulationRequest);
   }, [circuit]);

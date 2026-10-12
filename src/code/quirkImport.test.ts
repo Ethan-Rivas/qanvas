@@ -59,6 +59,6 @@ describe('Quirk import', () => {
     expect(importQuirk(quirkLink(grover))).toEqual({ ok: false, error: { code: 'unsupported', detail: 'Oracle, ◦, •H, Rxft(pi t)' } });
     expect(importQuirk(quirkLink({ cols: [['Measure'], ['H']] }))).toEqual({ ok: false, error: { code: 'after-measure' } });
     expect(importQuirk('https://algassert.com/quirk#circuit={"cols":')).toEqual({ ok: false, error: { code: 'invalid' } });
-    expect(importQuirk(quirkLink({ cols: [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 'H']] }))).toEqual({ ok: false, error: { code: 'too-many-qubits', detail: '13' } });
+    expect(importQuirk(quirkLink({ cols: [[...Array(24).fill(1), 'H']] }))).toEqual({ ok: false, error: { code: 'too-many-qubits', detail: '25' } });
   });
 });

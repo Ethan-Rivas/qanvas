@@ -3,10 +3,11 @@ import { forwardRef, useEffect, useRef, useState, type CSSProperties, type React
 import { formatAngle, parseAngle } from '../circuit/angle';
 import type { OpLocation } from '../circuit/edits';
 import { hasAngle, kindOf, type GateKind } from '../circuit/gates';
-import { operationQubits, type Circuit, type Operation } from '../circuit/model';
+import { BROWSER_QUBITS, operationQubits, type Circuit, type Operation } from '../circuit/model';
 import { currentStep, useEditor, type Notice } from '../editor/store';
 import { pluralKey, type Language, type MessageKey, type Translate } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
+import { qubitLimit, useLab } from '../lab/lab';
 import type { SimulationResult } from '../sim/useSimulation';
 import { cellId, type DragData, type DropData } from './dnd';
 import { PartGlyph, type PartShape } from './GateGlyph';
@@ -221,6 +222,7 @@ export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | 
   const step = useEditor(currentStep);
   const stepping = useEditor((s) => s.step !== null);
   const { addQubit, removeQubit, dismissNotice } = useEditor.getState();
+  const limit = qubitLimit(useLab((s) => s.lab));
   const cardRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -254,7 +256,7 @@ export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | 
         <div className="notice-slot" role="status">
           {notice && (
             <span className="notice">
-              {t(NOTICE_KEYS[notice] ?? 'error.other')}
+              {t(NOTICE_KEYS[notice] ?? 'error.other', { max: limit })}
               <button type="button" className="notice-dismiss" onClick={dismissNotice} aria-label={t('notice.dismiss')}>
                 <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
                   <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -263,7 +265,7 @@ export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | 
             </span>
           )}
         </div>
-        <button type="button" className="button" onClick={addQubit} disabled={circuit.qubits >= 12}>
+        <button type="button" className="button" onClick={addQubit} disabled={circuit.qubits >= limit}>
           + {t('circuit.addQubit')}
         </button>
       </div>
@@ -275,7 +277,7 @@ export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | 
           className="circuit-scroll"
           onScroll={(e) => cardRef.current?.style.setProperty('--scroll-x', `${e.currentTarget.scrollLeft}px`)}
         >
-          <div className="circuit-grid" style={{ gridTemplateColumns: `var(--label-width) repeat(${columnCount}, var(--cell-width))` }}>
+          <div className="circuit-grid" data-compact={circuit.qubits > BROWSER_QUBITS || undefined} style={{ gridTemplateColumns: `var(--label-width) repeat(${columnCount}, var(--cell-width))` }}>
             {qubits.map((q) => (
               <div key={`label-${q}`} className="qubit-label" style={{ gridRow: q + 1, gridColumn: 1 }}>
                 <span>q{q}</span>

@@ -4,6 +4,7 @@ import type { Cell, EditError, EditResult, OpLocation } from '../circuit/edits';
 import type { GateKind } from '../circuit/gates';
 import { validateCircuit, type Circuit, type Operation } from '../circuit/model';
 import type { ExampleId } from '../examples/examples';
+import { qubitLimit, useLab } from '../lab/lab';
 import type { Language } from '../i18n/i18n';
 
 const HISTORY_LIMIT = 200;
@@ -131,7 +132,7 @@ export const useEditor = create<EditorState>()((set, get) => {
     movePart: (from, to) => apply(edits.movePart(get().circuit, from, to)),
     removeOperation: (at) => apply(edits.removeOperation(get().circuit, at)),
     setAngle: (at, angle) => apply(edits.setAngle(get().circuit, at, angle)),
-    addQubit: () => apply(edits.addQubit(get().circuit), true),
+    addQubit: () => apply(edits.addQubit(get().circuit, qubitLimit(useLab.getState().lab)), true),
     removeQubit: (qubit) => apply(edits.removeQubit(get().circuit, qubit)),
 
     copySelection() {

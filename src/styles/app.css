@@ -1682,3 +1682,8 @@ button:disabled {
   margin-left: auto;
   padding: 6px 0;
 }
+
+/* Above the browser's limit the circuit gets tall, so rows close up; gates keep their 44 px targets. */
+.circuit-grid[data-compact] {
+  --row-height: 56px;
+}

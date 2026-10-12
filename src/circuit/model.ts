@@ -1,4 +1,6 @@
-export const MAX_QUBITS = 12;
+/** The most qubits a circuit can have; above BROWSER_QUBITS, only quantum-lab's Qiskit Aer runs it. */
+export const MAX_QUBITS = 24;
+export const BROWSER_QUBITS = 12;
 
 export type GateName =
   | 'H' | 'X' | 'Y' | 'Z'
