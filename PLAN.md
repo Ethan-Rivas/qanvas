@@ -180,7 +180,7 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 - **Same address, no CORS:** inside quantum-lab, Qanvas's nginx forwards `/api/` to the bridge, so the page only ever talks to its own address. The image turns that forwarding on only when an environment variable such as `QANVAS_BRIDGE_URL` is set, so the same image still works on its own and the website never sees it.
 - **Discovery:** at start, Qanvas asks `./api/health`. If it answers, the lab-only buttons appear; on the website and in plain Docker they don't.
 - **Bit order:** the bridge converts Qiskit's counts to Qanvas's order (q0 first) before replying, with a comment, and its tests check the conversion on circuits where the order matters.
-- **Bigger circuits:** with the bridge, the qubit limit rises from 12 to an Aer limit to be decided (around 28). Above 12 qubits the browser stops simulating: Aer's sampled counts replace the exact histogram, and the amplitudes, Bloch spheres and step-through explanations aren't shown, with a note saying why.
+- **Bigger circuits:** with the bridge, the qubit limit rises from 12 to 24. Aer's state for 24 qubits takes 256 MB, which fits Docker Desktop's default memory; 28 would need 4 GB. Above 12 qubits the browser stops simulating: Aer's sampled counts replace the exact histogram, and the amplitudes, Bloch spheres and step-through explanations aren't shown, with a note saying why.
 - **Notebooks:** Qanvas builds the notebook itself from its Qiskit (or Cirq, or pyQuil) export, plus a cell that runs it and plots the results. The export tests already run that code; the bridge's tests also execute a generated notebook with nbconvert.
 - **Quirk links:** Quirk's JSON format is read in the browser, mapping its gate names to Qanvas's and stopping with a clear message, as the OpenQASM importer does, at gates Qanvas lacks (such as anti-controls). Quirk's own bit order needs checking against Qanvas's, with a test.
 
@@ -195,7 +195,7 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 
 **Open questions for 0.2:**
 
-- [ ] The qubit limit with Aer, and how the editor should look with that many wires.
+- [x] The qubit limit with Aer is 24 for now (decided Oct 12, 2026). Rows get more compact above 12 qubits so the circuit stays readable.
 - [x] Importing Qiskit code works only in quantum-lab, where real Python runs it, so anything that runs in a notebook imports. A browser-side reader for simple code on the website can come later if students ask for it. (Decided Oct 12, 2026.)
 - [ ] What the 0.1 reviews and feedback from students change about this list.
 
