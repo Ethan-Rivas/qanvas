@@ -1629,3 +1629,56 @@ button:disabled {
   margin: 0;
   accent-color: var(--brand);
 }
+
+.qasm-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 16px;
+}
+
+.qasm-editor-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--ground);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--ink);
+  resize: none;
+}
+
+.qasm-editor-input:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+
+.qasm-editor-status {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.qasm-editor-status[data-error] {
+  color: var(--notice-ink);
+}
+
+.code-note {
+  margin: 0;
+  padding: 8px 24px 12px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+.code-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 6px 0;
+}

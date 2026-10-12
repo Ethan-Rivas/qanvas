@@ -245,5 +245,11 @@
   "import.quirk.invalid": "Qanvas no pudo leer este enlace de Quirk.",
   "import.quirk.too-many-qubits": "Este circuito usa {detail} qubits; Qanvas trabaja con hasta 12.",
   "import.quirk.unsupported": "Qanvas todavía no tiene estas compuertas de Quirk: {detail}. Tu circuito no cambió.",
-  "import.quirk.after-measure": "Hay una compuerta después de una medición en el mismo qubit. En Qanvas, las mediciones van al final."
+  "import.quirk.after-measure": "Hay una compuerta después de una medición en el mismo qubit. En Qanvas, las mediciones van al final.",
+  "code.edit": "Editar",
+  "code.done": "Listo",
+  "code.editLabel": "Código OpenQASM 2.0",
+  "code.editHint": "El circuito se actualiza cuando dejas de escribir.",
+  "code.keptCircuit": "El circuito conserva su última versión válida.",
+  "code.editInLab": "Pronto podrás editar código de Qiskit, Cirq y pyQuil en quantum-lab. Por ahora, puedes editar la pestaña de OpenQASM."
 }

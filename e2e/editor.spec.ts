@@ -181,6 +181,24 @@ test('downloads the circuit as a notebook, a script or OpenQASM', async ({ page 
   expect(await readFile((await qasm.path())!, 'utf8')).toContain('cx q[0],q[1];');
 });
 
+test('edits the OpenQASM code and keeps the last valid circuit', async ({ page }) => {
+  await expect(page.getByText('Editing Qiskit, Cirq and pyQuil code is coming to quantum-lab.', { exact: false })).toBeVisible();
+  await page.getByRole('tab', { name: 'OpenQASM' }).click();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  const code = page.getByRole('textbox', { name: 'OpenQASM 2.0 code' });
+  await code.fill('OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[2];\nh q[0];\ncx q[0],q[1];');
+  await expect(outcome(page, '|11⟩: 50%')).toBeVisible();
+
+  await code.fill('OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[2];\nh q[0];\ncx q[0],');
+  await expect(page.getByRole('status').filter({ hasText: 'Line 5' })).toHaveText("Line 5: Qanvas couldn't read this statement. The circuit keeps its last valid version.");
+  await expect(outcome(page, '|11⟩: 50%')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('#code-view')).toContainText('cx q[0],q[1];');
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(outcome(page, '|000⟩: 100%')).toBeVisible();
+});
+
 test('keeps working offline after the first visit', async ({ page, context }) => {
   await page.evaluate(() => navigator.serviceWorker.ready);
   await context.setOffline(true);
@@ -210,6 +228,13 @@ test('has no automatically detectable accessibility issues', async ({ page }) =>
   await page.getByText('Amplitudes').click();
   const describe = (violations: { id: string; nodes: { target: unknown }[] }[]) => violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`);
   expect(describe((await new AxeBuilder({ page }).analyze()).violations)).toEqual([]);
+
+  await page.getByRole('tab', { name: 'OpenQASM' }).click();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.getByRole('textbox', { name: 'OpenQASM 2.0 code' }).fill('OPENQASM 2.0;\nqreg q[1];\nfoo q[0];');
+  await expect(page.getByText('The circuit keeps its last valid version.', { exact: false })).toBeVisible();
+  expect(describe((await new AxeBuilder({ page }).analyze()).violations)).toEqual([]);
+  await page.getByRole('button', { name: 'Done' }).click();
 
   for (const dialog of ['Examples', 'Open', 'Share', 'Download']) {
     await page.getByRole('button', { name: dialog, exact: true }).click();
