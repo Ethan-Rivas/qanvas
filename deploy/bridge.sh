@@ -27,6 +27,8 @@ location /api/ {
     proxy_pass \$bridge;
     proxy_set_header Host \$http_host;
     client_max_body_size 5m;
+    # Aer may take up to two minutes on a 24-qubit circuit.
+    proxy_read_timeout 150s;
 }
 CONF
 echo "Qanvas: forwarding /api/ to $QANVAS_BRIDGE_URL"
