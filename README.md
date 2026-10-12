@@ -13,6 +13,13 @@ npm run test:export  # runs the exported code in the quantum-lab image (needs Do
 npm run typecheck
 ```
 
+## Running it
+
+- **Website:** each release tag publishes the app to GitHub Pages (`.github/workflows/pages.yml`).
+- **Offline and installable:** after the first visit Qanvas works without internet, and the browser can install it as an app.
+- **In quantum-lab:** the `Dockerfile` builds a small web server (published as `ghcr.io/ethan-rivas/qanvas`); see [docs/quantum-lab.md](docs/quantum-lab.md).
+- **Icons:** `npm run icons` renders `public/icons` from the design tokens after a brand color change.
+
 ## Correctness
 
 The simulator is checked against Qiskit: every amplitude must match within 1e-9.

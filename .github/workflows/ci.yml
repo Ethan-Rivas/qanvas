@@ -37,3 +37,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:export
+
+  server-image:
+    # Builds the quantum-lab web-server image so a broken Dockerfile shows up before a release.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t qanvas:ci .
