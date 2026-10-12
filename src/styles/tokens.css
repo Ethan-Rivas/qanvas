@@ -1,0 +1,48 @@
+/* The only file with color values. The palette is a placeholder from concept D (see PLAN.md). */
+:root {
+  --brand: #0F7B6C;
+  --brand-ink: #0B6B5E;
+  --brand-ink-hover: #08524A;
+  --brand-soft: #E8F4F1;
+  --brand-softer: #EEF7F5;
+  --on-brand: #FFFFFF;
+
+  --quantum-data: #0F7B6C;
+  --measure: #E2A75A;
+
+  --ink: #1D1F1E;
+  --ink-muted: #5E615E;
+  --surface: #FFFFFF;
+  --ground: #FAF8F4;
+  --ground-dots: #E3DED4;
+  --border: #E8E4DC;
+  --border-strong: #E1DDD4;
+  --border-subtle: #F1EEE8;
+  --control-track: #F1EEE8;
+  --wire: #CFCBC2;
+  --shadow: rgba(0, 0, 0, 0.08);
+  --overlay-shadow: rgba(29, 31, 30, 0.18);
+  --ok: #3C8A4A;
+  --notice-bg: #FFF9EE;
+  --notice-border: #E1C79B;
+  --notice-ink: #7A4B00;
+
+  --gate-hadamard-border: #8A8AE0;
+  --gate-hadamard-bg: #EEEEFC;
+  --gate-hadamard-ink: #36369A;
+  --gate-pauli-border: #7FB0E6;
+  --gate-pauli-bg: #EAF3FD;
+  --gate-pauli-ink: #1D5796;
+  --gate-phase-border: #6CC0AE;
+  --gate-phase-bg: #E6F5F1;
+  --gate-phase-ink: #0E6152;
+  --gate-rotation-border: #AE94E6;
+  --gate-rotation-bg: #F2EDFC;
+  --gate-rotation-ink: #5A35A8;
+  --gate-multi-border: #B9BBC2;
+  --gate-multi-bg: #F3F3F1;
+  --gate-multi-ink: #1D1F1E;
+  --gate-measure-border: #E2A75A;
+  --gate-measure-bg: #FDF2E2;
+  --gate-measure-ink: #8A4F00;
+}
