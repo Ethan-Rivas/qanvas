@@ -1,7 +1,8 @@
 # Qanvas as a small static web server, for running it as a quantum-lab service.
 #   docker build -t qanvas .
 #   docker run --rm -p 127.0.0.1:8080:8080 qanvas
-FROM node:22-alpine AS build
+# The site is the same static files on every platform, so it's built once natively; npm and the bundler crash under QEMU.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /qanvas
 COPY package.json package-lock.json ./
 RUN npm ci
