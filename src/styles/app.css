@@ -994,6 +994,10 @@ button:disabled {
   font-size: 14px;
 }
 
+.condition-field {
+  grid-template-columns: auto minmax(120px, max-content);
+}
+
 .angle-field input[aria-invalid] {
   border-color: var(--notice-ink);
 }

@@ -197,7 +197,7 @@ function ConditionField({ at, op, circuit }: { at: OpLocation; op: Operation; ci
   }
 
   return (
-    <div className="angle-field">
+    <div className="angle-field condition-field">
       <label htmlFor="condition-select">{t('circuit.condition')}</label>
       <select id="condition-select" value={current} aria-describedby="condition-help" onChange={(e) => change(e.target.value)}>
         <option value="">{t('circuit.conditionAlways')}</option>
