@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BROWSER_QUBITS, type Circuit } from '../circuit/model';
+import { countedQubits } from '../code/download';
 import { codeText, generateCode } from '../code/generate';
 import { useEditor } from '../editor/store';
 import { useT } from '../i18n/useT';
@@ -18,10 +19,11 @@ function order(measured: number[]): string {
 }
 
 /** Results for circuits too large for the browser: Qiskit Aer's counts in quantum-lab, or a note elsewhere. */
-export function AerResults() {
+export function AerResults({ limit }: { limit: number }) {
   const t = useT();
   const circuit = useEditor((s) => s.circuit);
   const canRun = useLab((s) => s.lab?.features.includes('run') ?? false);
+  const labRunsNoise = useLab((s) => s.lab?.features.includes('noise') ?? false);
   const [run, setRun] = useState<Run | null>(null);
   const [running, setRunning] = useState(false);
   // A run belongs to the circuit it ran; after an edit the counts would describe another circuit.
@@ -30,7 +32,7 @@ export function AerResults() {
   async function start() {
     setRunning(true);
     try {
-      const answer = await runOnAer(codeText(generateCode('qasm', circuit, t)), SHOTS);
+      const answer = await runOnAer(codeText(generateCode('qasm', circuit, t)), SHOTS, labRunsNoise ? { noise: circuit.noise, measured: countedQubits(circuit) } : {});
       setRun({ circuit, ...answer });
     } catch (error) {
       setRun({ circuit, error: error as LabError });
@@ -62,7 +64,7 @@ export function AerResults() {
         </div>
         {canRun ? (
           <>
-            <p className="results-note">{t('aer.intro', { count: circuit.qubits, max: BROWSER_QUBITS, shots: SHOTS })}</p>
+            <p className="results-note">{t(limit === BROWSER_QUBITS ? 'aer.intro' : 'aer.introDensity', { count: circuit.qubits, max: limit, shots: SHOTS })}</p>
             <div>
               <button type="button" className="button button--primary" disabled={running} onClick={start}>
                 {t(current ? 'aer.rerun' : 'aer.run')}
@@ -83,17 +85,17 @@ export function AerResults() {
           </>
         ) : (
           <p className="results-note">
-            {t('aer.noLab', { count: circuit.qubits, max: BROWSER_QUBITS })}{' '}
+            {t('aer.noLab', { count: circuit.qubits, max: limit })}{' '}
             <a href={QUANTUM_LAB} target="_blank" rel="noreferrer">
               {t('aer.aboutLab')}
             </a>
           </p>
         )}
-        <p className="results-note">{t('aer.limits', { max: BROWSER_QUBITS })}</p>
+        <p className="results-note">{t('aer.limits', { max: limit })}</p>
       </section>
       <div className="results-footer">
         <span className="status-dot" aria-hidden="true" />
-        <span>{t(canRun ? 'aer.footer' : 'aer.footerNoLab', { max: BROWSER_QUBITS })}</span>
+        <span>{t(canRun ? 'aer.footer' : 'aer.footerNoLab', { max: limit })}</span>
       </div>
     </aside>
   );

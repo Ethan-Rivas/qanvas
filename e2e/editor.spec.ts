@@ -385,3 +385,24 @@ test('adds noise from the toolbar, keeps it in the link and undoes a slider run 
   await page.getByRole('button', { name: 'Turn noise off' }).click();
   await expect(page.getByText('3 qubits · 1 step', { exact: true })).toBeVisible();
 });
+
+const nineQubits = `OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[9];\ncreg c[9];\nx q[0];\nmeasure q -> c;`;
+
+test('sends noisy circuits above 8 qubits to Qiskit Aer when the lab can add the noise', async ({ page }) => {
+  await openQasm(page, nineQubits);
+  await page.getByRole('button', { name: 'Noise', exact: true }).click();
+  await page.getByLabel('One-qubit gates').fill('1');
+  await expect(page.getByText('Noise, measuring partway through and resetting work with up to 8 qubits', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Run with Qiskit Aer' })).toHaveCount(0);
+
+  let sent: Record<string, unknown> = {};
+  await page.route('**/api/health', (route) => route.fulfill({ json: { version: 1, features: ['notebook', 'run', 'import', 'noise'] } }));
+  await page.route('**/api/run', (route) => {
+    sent = route.request().postDataJSON();
+    return route.fulfill({ json: { counts: { '100000000': 1000 }, measured: Array.from({ length: 9 }, (_, q) => q) } });
+  });
+  await page.reload();
+  await page.getByRole('button', { name: 'Run with Qiskit Aer' }).click();
+  await expect(outcome(page, '|100000000⟩: 100%')).toBeVisible();
+  expect(sent).toMatchObject({ noise: { oneQubit: 0.01, twoQubit: 0, readout: 0 }, measured: [0, 1, 2, 3, 4, 5, 6, 7, 8] });
+});

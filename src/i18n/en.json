@@ -298,6 +298,7 @@
   "download.pyquil5": "pyQuil 4.22 warns about changes coming in pyQuil 5; they don't affect this code.",
   "aer.title": "Sampled outcomes",
   "aer.intro": "This circuit has {count} qubits. The browser works out circuits of up to {max}, so quantum-lab runs this one {shots} times with Qiskit Aer and counts each outcome.",
+  "aer.introDensity": "This circuit has {count} qubits. The browser works out circuits with noise, or that measure partway through or reset, for up to {max}, so quantum-lab runs this one {shots} times with Qiskit Aer and counts each outcome.",
   "aer.run": "Run with Qiskit Aer",
   "aer.rerun": "Run again",
   "aer.running": "Running on Qiskit Aer…",

@@ -1,7 +1,8 @@
-import { BROWSER_QUBITS, DENSITY_QUBITS, hasGateNoise, hasNoise, usesDensity } from '../circuit/model';
+import { browserLimit, hasGateNoise, hasNoise, isDynamic } from '../circuit/model';
 import { currentStep, useEditor } from '../editor/store';
 import { formatPercent } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
+import { useLab } from '../lab/lab';
 import { blochVector, formatComplex, pureVector } from '../sim/analysis';
 import { probabilities, withReadout } from '../sim/simulator';
 import { stateAt, type SimulationResult } from '../sim/useSimulation';
@@ -83,8 +84,11 @@ export function Histogram({ items, vertical }: { items: { label: string; p: numb
 
 export function Results({ result, ideal, pending }: { result: SimulationResult | null; ideal: SimulationResult | null; pending: boolean }) {
   const t = useT();
-  const large = useEditor((s) => s.circuit.qubits > BROWSER_QUBITS);
-  const densityLimited = useEditor((s) => usesDensity(s.circuit) && s.circuit.qubits > DENSITY_QUBITS);
+  const limit = useEditor((s) => browserLimit(s.circuit));
+  const tooLarge = useEditor((s) => s.circuit.qubits > browserLimit(s.circuit));
+  // Without the lab's "noise" feature, Aer would run these without their noise, or count mid-circuit measurements as final.
+  const needsLabNoise = useEditor((s) => hasNoise(s.circuit) || isDynamic(s.circuit));
+  const labRunsNoise = useLab((s) => s.lab?.features.includes('noise') ?? false);
   const circuit = useEditor((s) => s.circuit);
   const language = useEditor((s) => s.language);
   const learnMode = useEditor((s) => s.learnMode);
@@ -105,17 +109,17 @@ export function Results({ result, ideal, pending }: { result: SimulationResult |
   const rows = mostLikely(exact, nonzero);
   const subtitle = step === 0 ? t('results.atStart') : step >= end ? t('results.atEnd') : t('results.afterStep', { step });
 
-  if (densityLimited) {
+  if (tooLarge && needsLabNoise && !labRunsNoise) {
     return (
       <aside className="results" aria-label={t('results.title')}>
         <section className="results-section">
           <h2>{t('results.title')}</h2>
-          <p className="results-note">{t('results.densityLimit', { max: DENSITY_QUBITS })}</p>
+          <p className="results-note">{t('results.densityLimit', { max: limit })}</p>
         </section>
       </aside>
     );
   }
-  if (large) return <AerResults />;
+  if (tooLarge) return <AerResults limit={limit} />;
 
   return (
     <aside className="results" aria-label={t('results.title')}>

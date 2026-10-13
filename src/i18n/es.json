@@ -298,6 +298,7 @@
   "download.pyquil5": "pyQuil 4.22 avisa sobre cambios que vienen en pyQuil 5; no afectan este código.",
   "aer.title": "Resultados muestreados",
   "aer.intro": "Este circuito tiene {count} qubits. El navegador calcula circuitos de hasta {max}, así que quantum-lab corre este {shots} veces con Qiskit Aer y cuenta cada resultado.",
+  "aer.introDensity": "Este circuito tiene {count} qubits. El navegador calcula circuitos con ruido, o que miden a mitad del circuito o reinician qubits, de hasta {max}, así que quantum-lab corre este {shots} veces con Qiskit Aer y cuenta cada resultado.",
   "aer.run": "Correr con Qiskit Aer",
   "aer.rerun": "Correr de nuevo",
   "aer.running": "Corriendo en Qiskit Aer…",

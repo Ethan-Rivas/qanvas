@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BROWSER_QUBITS, MAX_QUBITS } from '../circuit/model';
+import { BROWSER_QUBITS, MAX_QUBITS, type Noise } from '../circuit/model';
 
 /** What quantum-lab's bridge offers, when Qanvas runs inside quantum-lab. */
 export interface Lab {
@@ -62,9 +62,12 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return answer as T;
 }
 
-/** Counts from Qiskit Aer, keyed by the measured qubits with q0 first (the bridge converts Qiskit's order). */
-export function runOnAer(qasm: string, shots: number): Promise<{ counts: Record<string, number>; measured: number[] }> {
-  return post('./api/run', { qasm, shots });
+/**
+ * Counts from Qiskit Aer, keyed by the measured qubits with q0 first (the bridge converts Qiskit's order). With the
+ * lab's "noise" feature, Aer adds `noise` and counts the `measured` qubits (docs/superpowers/specs/2026-10-13-lab-run-noise.md).
+ */
+export function runOnAer(qasm: string, shots: number, extra: { noise?: Noise; measured?: number[] } = {}): Promise<{ counts: Record<string, number>; measured: number[] }> {
+  return post('./api/run', { qasm, shots, ...extra });
 }
 
 /** Runs Qiskit, Cirq or pyQuil code in the lab and gives back the circuit it builds, as OpenQASM. */
