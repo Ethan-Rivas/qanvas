@@ -327,3 +327,13 @@ test('has no automatically detectable accessibility issues', async ({ page }) =>
     await expect(page.getByRole('dialog')).toBeHidden();
   }
 });
+
+test('runs a gate only when a measurement gives 1', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await drag(page, paletteGate(page, /Pauli-X/), cell(page, 0, 0));
+  await drag(page, paletteGate(page, /Measure/), cell(page, 1, 0));
+  await drag(page, paletteGate(page, /Pauli-X/), cell(page, 2, 1));
+  await page.getByLabel('Runs').selectOption({ label: 'If q0 measured 1' });
+  await expect(page.getByRole('region', { name: 'Circuit summary' }).getByRole('listitem').nth(2)).toHaveText('Step 3: Pauli-X (if q0 measured 1) on q1.');
+  await expect(outcome(page, '|110⟩: 100%')).toBeVisible();
+});

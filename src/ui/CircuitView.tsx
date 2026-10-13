@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useRef, useState, type CSSProperties, type React
 import { formatAngle, parseAngle } from '../circuit/angle';
 import type { OpLocation } from '../circuit/edits';
 import { hasAngle, kindOf, type GateKind } from '../circuit/gates';
-import { BROWSER_QUBITS, operationQubits, type Circuit, type Operation } from '../circuit/model';
+import { BROWSER_QUBITS, GATE_RULES, operationQubits, readableQubits, type Circuit, type Condition, type Operation } from '../circuit/model';
 import { currentStep, useEditor, type Notice } from '../editor/store';
 import { pluralKey, type Language, type MessageKey, type Translate } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
@@ -54,7 +54,8 @@ function partsOf(circuit: Circuit): Map<string, Part> {
 
 export function gateLabel(t: Translate, op: Operation): string {
   const name = t(`gate.${kindOf(op)}.name`);
-  return op.angle === undefined ? name : `${name} ${formatAngle(op.angle)}`;
+  const label = op.angle === undefined ? name : `${name} ${formatAngle(op.angle)}`;
+  return op.condition ? `${label} ${t('circuit.conditionSuffix', { qubit: `q${op.condition.qubit}`, value: op.condition.value })}` : label;
 }
 
 function partLabel(t: Translate, part: Part): string {
@@ -182,6 +183,38 @@ function AngleField({ at, op }: { at: OpLocation; op: Operation }) {
   );
 }
 
+function ConditionField({ at, op, circuit }: { at: OpLocation; op: Operation; circuit: Circuit }) {
+  const t = useT();
+  const setCondition = useEditor((s) => s.setCondition);
+  const readable = readableQubits(circuit, at.column).filter((q) => !operationQubits(op).includes(q));
+  const current = op.condition ? `${op.condition.qubit}:${op.condition.value}` : '';
+
+  function change(choice: string) {
+    if (!choice) return setCondition(at, null);
+    const [qubit, value] = choice.split(':').map(Number);
+    setCondition(at, { qubit, value: value as Condition['value'] });
+  }
+
+  return (
+    <div className="angle-field">
+      <label htmlFor="condition-select">{t('circuit.condition')}</label>
+      <select id="condition-select" value={current} aria-describedby="condition-help" onChange={(e) => change(e.target.value)}>
+        <option value="">{t('circuit.conditionAlways')}</option>
+        {readable.flatMap((q) =>
+          [1, 0].map((value) => (
+            <option key={`${q}:${value}`} value={`${q}:${value}`}>
+              {t('circuit.conditionIf', { qubit: `q${q}`, value })}
+            </option>
+          )),
+        )}
+      </select>
+      <span id="condition-help" className="field-help">
+        {t(readable.length > 0 ? 'circuit.conditionHelp' : 'circuit.conditionNone')}
+      </span>
+    </div>
+  );
+}
+
 function Inspector({ circuit, onDeleted }: { circuit: Circuit; onDeleted: () => void }) {
   const t = useT();
   const selection = useEditor((s) => s.selection);
@@ -198,6 +231,9 @@ function Inspector({ circuit, onDeleted }: { circuit: Circuit; onDeleted: () => 
         <span className="inspector-hint">{t('circuit.selectedHint')}</span>
       </div>
       {hasAngle(kindOf(op)) && <AngleField key={`${selection.column}:${selection.index}`} at={selection} op={op} />}
+      {GATE_RULES[op.gate].conditional && !op.controls?.length && (
+        <ConditionField key={`condition-${selection.column}:${selection.index}`} at={selection} op={op} circuit={circuit} />
+      )}
       <button
         type="button"
         className="button"
@@ -227,6 +263,8 @@ export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | 
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const parts = partsOf(circuit);
+  const conditionReads = new Map<string, Condition['value']>();
+  circuit.columns.forEach((column, c) => column.forEach((op) => op.condition && conditionReads.set(`${c}:${op.condition.qubit}`, op.condition.value)));
   const columnCount = Math.max(circuit.columns.length + 1, MIN_COLUMNS);
   const qubits = Array.from({ length: circuit.qubits }, (_, q) => q);
   const isSelected = (p: Part) => selection?.column === p.column && selection.index === p.index;
@@ -320,12 +358,33 @@ export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | 
               }),
             )}
 
+            {circuit.columns.map((column, c) =>
+              column.map((op, i) => {
+                if (!op.condition) return null;
+                const rows = [op.condition.qubit, op.targets[0]];
+                return (
+                  <div
+                    key={`classical-${c}-${i}`}
+                    className="link link--classical"
+                    data-timeline={timeline(c)}
+                    aria-hidden="true"
+                    style={{ gridColumn: c + 2, gridRow: `${Math.min(...rows) + 1} / ${Math.max(...rows) + 2}` }}
+                  />
+                );
+              }),
+            )}
+
             {Array.from({ length: columnCount }, (_, c) =>
               qubits.map((q) => {
                 const part = parts.get(`${c}:${q}`);
                 return (
                   <Cell key={`${c}:${q}`} column={c} qubit={q} timeline={timeline(c)}>
                     {part && <PartButton part={part} selected={isSelected(part)} />}
+                    {!part && conditionReads.has(`${c}:${q}`) && (
+                      <span className="condition-marker" aria-hidden="true">
+                        ={conditionReads.get(`${c}:${q}`)}
+                      </span>
+                    )}
                   </Cell>
                 );
               }),

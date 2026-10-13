@@ -842,6 +842,31 @@ button:disabled {
   background: var(--ink);
 }
 
+.link--classical::before {
+  left: calc(50% - 3px);
+  width: 6px;
+  background: none;
+  border-left: 2px solid var(--ink);
+  border-right: 2px solid var(--ink);
+}
+
+.link--classical[data-timeline='future']::before {
+  background: none;
+  border-color: var(--ink-muted);
+}
+
+.condition-marker {
+  position: relative;
+  z-index: 2;
+  padding: 2px 6px;
+  border: 1px solid var(--ink);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
 .part {
   position: relative;
   z-index: 2;
@@ -958,7 +983,8 @@ button:disabled {
   font-weight: 600;
 }
 
-.angle-field input {
+.angle-field input,
+.angle-field select {
   height: var(--target);
   padding: 0 10px;
   border: 1px solid var(--border-strong);

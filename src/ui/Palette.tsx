@@ -11,7 +11,7 @@ import { GateIcon } from './GateGlyph';
 const GROUPS: { title: MessageKey; layout: 'cards' | 'grid'; kinds: GateKind[] }[] = [
   { title: 'palette.group.basics', layout: 'cards', kinds: ['H', 'X', 'Y', 'Z'] },
   { title: 'palette.group.phaseRotation', layout: 'grid', kinds: ['S', 'Sdg', 'T', 'Tdg', 'P', 'RX', 'RY', 'RZ'] },
-  { title: 'palette.group.multiMeasure', layout: 'cards', kinds: ['CNOT', 'CZ', 'SWAP', 'CCX', 'M'] },
+  { title: 'palette.group.multiMeasure', layout: 'cards', kinds: ['CNOT', 'CZ', 'SWAP', 'CCX', 'M', 'RESET'] },
 ];
 
 function normalize(text: string) {
