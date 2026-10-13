@@ -62,7 +62,6 @@ export function measurementKey(qubit: number, nth: number): string {
   return nth === 1 ? `q${qubit}` : `q${qubit}_${nth}`;
 }
 
-/** How many times each qubit is measured. */
 export function measurementCounts(circuit: Circuit): number[] {
   const counts = new Array<number>(circuit.qubits).fill(0);
   for (const { op } of operations(circuit)) if (op.gate === 'M') op.targets.forEach((q) => counts[q]++);

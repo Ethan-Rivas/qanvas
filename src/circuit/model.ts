@@ -79,7 +79,6 @@ export function operationQubits(op: Operation): number[] {
   return [...(op.controls ?? []), ...op.targets];
 }
 
-/** The qubits an operation acts on, plus the one its condition reads. */
 export function referencedQubits(op: Operation): number[] {
   return op.condition ? [...operationQubits(op), op.condition.qubit] : operationQubits(op);
 }
@@ -101,7 +100,6 @@ export function validateCircuit(circuit: Circuit): CircuitError[] {
     return [{ code: 'qubit-count' }];
   }
 
-  // Measured in an earlier column and not touched since: the only qubits a condition may read.
   const readable = new Set<number>();
 
   circuit.columns.forEach((column, c) => {

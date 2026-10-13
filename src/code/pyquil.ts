@@ -9,7 +9,6 @@ const NAME: Record<string, string> = {
   CNOT: 'CNOT', CZ: 'CZ', SWAP: 'SWAP', CCX: 'CCNOT', M: 'MEASURE',
 };
 
-/** The instruction, plus a note that goes at the end of the line. */
 function instruction(op: Operation): { code: string; note?: string } {
   const kind = kindOf(op);
   const qubits = [...(op.controls ?? []), ...op.targets].join(', ');

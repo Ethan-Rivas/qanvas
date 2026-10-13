@@ -93,7 +93,7 @@ export function explainStep(
     else if (sameUpToPhase(was, is)) sentences.push(t('learn.globalPhase'));
     else sentences.push(...entanglementSentences(was, is, t, language));
   }
-  if (!is && kinds.has('M')) sentences.push(t('learn.measuredMix'));
+  if (was && !is && kinds.has('M')) sentences.push(t('learn.measuredMix'));
 
   const show = (state: StateVector | null) => (state ? formatState(state) : t('learn.mixed'));
   return { label: columnLabel(column, t, language), title, sentences, before: show(was), after: show(is) };

@@ -186,7 +186,8 @@ function AngleField({ at, op }: { at: OpLocation; op: Operation }) {
 function ConditionField({ at, op, circuit }: { at: OpLocation; op: Operation; circuit: Circuit }) {
   const t = useT();
   const setCondition = useEditor((s) => s.setCondition);
-  const readable = readableQubits(circuit, at.column).filter((q) => !operationQubits(op).includes(q));
+  const othersBusy = circuit.columns[at.column].filter((other) => other !== op).flatMap(operationQubits);
+  const readable = readableQubits(circuit, at.column).filter((q) => !operationQubits(op).includes(q) && !othersBusy.includes(q));
   const current = op.condition ? `${op.condition.qubit}:${op.condition.value}` : '';
 
   function change(choice: string) {

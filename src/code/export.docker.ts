@@ -111,7 +111,7 @@ test('downloaded scripts and notebooks run and their counts agree with Qanvas', 
 
   const failures: string[] = [];
   output.forEach(({ name, results }, i) => {
-    const probabilities = outcomeProbabilities(scriptCases[i].circuit);
+    const expected = outcomeProbabilities(scriptCases[i].circuit);
     const expectedRuns = 3 * (notebookCases.has(name) ? 2 : 1);
     if (Object.keys(results).length !== expectedRuns) failures.push(`${name}: ${Object.keys(results).length} runs instead of ${expectedRuns}`);
     for (const [run, result] of Object.entries(results)) {
@@ -119,7 +119,7 @@ test('downloaded scripts and notebooks run and their counts agree with Qanvas', 
         failures.push(`${name} [${run}]: ${result.error}`);
         continue;
       }
-      failures.push(...countFailures(`${name} [${run}]`, result.counts, probabilities));
+      failures.push(...countFailures(`${name} [${run}]`, result.counts, expected));
     }
   });
   expect(failures).toEqual([]);
@@ -144,6 +144,8 @@ test('code for circuits that measure partway through runs and agrees with Qanvas
   output.forEach(({ name, results, qiskitQasm }, i) => {
     const { circuit } = picked[i];
     const expected = outcomeProbabilities(circuit);
+    const expectedRuns = 3 + (measuresAtEnd(circuit) ? 1 : 0);
+    if (Object.keys(results).length !== expectedRuns) failures.push(`${name}: ${Object.keys(results).length} runs instead of ${expectedRuns}`);
     for (const [run, result] of Object.entries(results)) {
       if ('error' in result) failures.push(`${name} [${run}]: ${result.error}`);
       else failures.push(...countFailures(`${name} [${run}]`, result.counts, expected));
