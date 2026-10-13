@@ -84,4 +84,34 @@ describe('dynamic circuits', () => {
     expect(text).toContain('program.if_then(reset[0], Program(X(0)), Program())\n');
     expect(text).toContain('program.if_then(ro[0], Program(), Program(PHASE(-pi/2, 1)))  # S†\n');
   });
+
+  const noisyBell: Circuit = {
+    qubits: 2,
+    columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'X', controls: [0], targets: [1] }], [{ gate: 'M', targets: [0, 1] }]],
+    noise: { oneQubit: 0.01, twoQubit: 0.02, readout: 0.03 },
+  };
+
+  it('writes the noise as a Qiskit Aer noise model', () => {
+    const text = codeText(generateCode('qiskit', noisyBell, t));
+    expect(text).toContain('from qiskit_aer.noise import NoiseModel, ReadoutError, depolarizing_error\n');
+    expect(text).toContain('noise.add_all_qubit_quantum_error(depolarizing_error(0.01, 1), ["h", "x", "y", "z", "s", "sdg", "t", "tdg", "rx", "ry", "rz", "p"])\n');
+    expect(text).toContain('noise.add_all_qubit_quantum_error(depolarizing_error(0.02, 2), ["cx", "cz", "swap"])\n');
+    expect(text).not.toContain('"ccx"');
+    expect(text).toContain('readout = 0.03\nnoise.add_all_qubit_readout_error(ReadoutError([[1 - readout, readout], [readout, 1 - readout]]))\n');
+  });
+
+  it('writes the noise into Cirq moments and measurements', () => {
+    const text = codeText(generateCode('cirq', noisyBell, t));
+    expect(text).toContain('import numpy as np\n');
+    expect(text).toContain('one_qubit_noise = cirq.depolarize(3 / 4 * 0.01)\ntwo_qubit_noise = cirq.depolarize(15 / 16 * 0.02, n_qubits=2)\n');
+    expect(text).toContain('    cirq.Moment(cirq.H(q[0])),\n    cirq.Moment(one_qubit_noise.on(q[0])),\n');
+    expect(text).toContain('cirq.measure(q[0], key="q0", confusion_map=confusion)');
+  });
+
+  it('says when pyQuil and OpenQASM leave the noise out, and writes nothing extra without noise', () => {
+    expect(codeText(generateCode('pyquil', noisyBell, t))).toContain('# This circuit has noise, but the pyQuil code here leaves it out');
+    expect(codeText(generateCode('qasm', noisyBell, t))).toContain('// This circuit has noise, which OpenQASM 2.0 can');
+    expect(codeText(generateCode('qiskit', ghz, t))).not.toContain('noise');
+    expect(codeText(generateCode('cirq', ghz, t))).not.toContain('noise');
+  });
 });

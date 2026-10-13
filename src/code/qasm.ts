@@ -1,5 +1,5 @@
 import { kindOf } from '../circuit/gates';
-import type { Operation } from '../circuit/model';
+import { hasNoise, type Operation } from '../circuit/model';
 import { angleExpression, hasConditions, measures, operations, type CodeLine, type Generator } from './common';
 
 // P(θ) is written as u1(θ), the same matrix, because qelib1.inc has no p gate.
@@ -20,10 +20,11 @@ function statement(op: Operation, bit: (q: number) => string): string {
   return `${condition}${NAME[kind]}${angle} ${args};`;
 }
 
-export const toQasm: Generator = (circuit) => {
+export const toQasm: Generator = (circuit, t) => {
   const registers = hasConditions(circuit);
   const bit = (q: number) => (registers ? `c${q}[0]` : `c[${q}]`);
   const lines: CodeLine[] = [{ text: 'OPENQASM 2.0;' }, { text: 'include "qelib1.inc";' }];
+  if (hasNoise(circuit)) lines.push({ text: `// ${t('code.noiseLeftOut.qasm')}` });
   // The standard qelib1.inc has no swap, so it is defined here when used.
   if (operations(circuit).some(({ op }) => op.gate === 'SWAP')) lines.push({ text: 'gate swap a,b { cx a,b; cx b,a; cx a,b; }' });
   lines.push({ text: '' }, { text: `qreg q[${circuit.qubits}];` });

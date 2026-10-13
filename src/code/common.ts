@@ -1,4 +1,4 @@
-import type { Circuit, Operation } from '../circuit/model';
+import { gateError, operationQubits, type Circuit, type Operation } from '../circuit/model';
 import type { Translate } from '../i18n/i18n';
 
 export type CodeFormat = 'qiskit' | 'cirq' | 'pyquil' | 'qasm';
@@ -66,4 +66,9 @@ export function measurementCounts(circuit: Circuit): number[] {
   const counts = new Array<number>(circuit.qubits).fill(0);
   for (const { op } of operations(circuit)) if (op.gate === 'M') op.targets.forEach((q) => counts[q]++);
   return counts;
+}
+
+/** How many qubits the gates with noise act on: 1, 2 or 3 (Toffoli). */
+export function noisyGateSizes(circuit: Circuit): Set<number> {
+  return new Set(operations(circuit).filter(({ op }) => gateError(op, circuit.noise) > 0).map(({ op }) => operationQubits(op).length));
 }

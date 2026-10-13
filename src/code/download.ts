@@ -1,6 +1,7 @@
-import { isDynamic, operationQubits, type Circuit } from '../circuit/model';
+import { hasNoise, isDynamic, operationQubits, type Circuit } from '../circuit/model';
 import type { Translate } from '../i18n/i18n';
 import { measurementCounts, measurementKey, measures, operations } from './common';
+import { cirqMeasure } from './cirq';
 import { generateCode } from './generate';
 
 export type PythonFormat = 'qiskit' | 'cirq' | 'pyquil';
@@ -36,9 +37,12 @@ function runCode(format: PythonFormat, circuit: Circuit, t: Translate): { import
   const tally = ['counts = {}', 'for key in keys:', '    counts[key] = counts.get(key, 0) + 1'];
   switch (format) {
     case 'qiskit': {
-      const sampler = isDynamic(circuit)
-        ? { imports: ['from qiskit_aer.primitives import SamplerV2'], note: [`# ${t('download.qiskitAer')}`], run: 'SamplerV2()' }
-        : { imports: ['from qiskit.primitives import StatevectorSampler'], note: [], run: 'StatevectorSampler()' };
+      const noisy = hasNoise(circuit);
+      const sampler = noisy
+        ? { imports: ['from qiskit_aer.primitives import SamplerV2'], note: [`# ${t('download.qiskitAerNoise')}`], run: 'SamplerV2(options={"backend_options": {"noise_model": noise}})' }
+        : isDynamic(circuit)
+          ? { imports: ['from qiskit_aer.primitives import SamplerV2'], note: [`# ${t('download.qiskitAer')}`], run: 'SamplerV2()' }
+          : { imports: ['from qiskit.primitives import StatevectorSampler'], note: [], run: 'StatevectorSampler()' };
       return {
         imports: sampler.imports,
         body: [
@@ -58,7 +62,7 @@ function runCode(format: PythonFormat, circuit: Circuit, t: Translate): { import
     case 'cirq': {
       const counts = measurementCounts(circuit);
       const keys = measured.map((q) => measurementKey(q, atEnd ? counts[q] : counts[q] + 1));
-      const finalMeasurements = measured.map((q, k) => `cirq.measure(q[${q}], key="${keys[k]}")`).join(', ');
+      const finalMeasurements = measured.map((q, k) => cirqMeasure(q, keys[k], circuit.noise?.readout ?? 0)).join(', ');
       return {
         imports: [],
         body: [

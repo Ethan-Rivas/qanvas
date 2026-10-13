@@ -1,5 +1,5 @@
 import { kindOf } from '../circuit/gates';
-import type { Operation } from '../circuit/model';
+import { hasNoise, type Operation } from '../circuit/model';
 import type { Translate } from '../i18n/i18n';
 import { angleExpression, measures, operations, usesPi, type CodeLine, type Generator } from './common';
 
@@ -37,7 +37,7 @@ function lines(op: Operation, t: Translate): string[] {
 
 export const toPyQuil: Generator = (circuit, t) => {
   const resets = operations(circuit).some(({ op }) => op.gate === 'RESET');
-  const body: CodeLine[] = [{ text: 'program = Program()' }];
+  const body: CodeLine[] = [...(hasNoise(circuit) ? [{ text: `# ${t('code.noiseLeftOut.pyquil')}` }] : []), { text: 'program = Program()' }];
   if (measures(circuit)) body.push({ text: `ro = program.declare("ro", "BIT", ${circuit.qubits})` });
   if (resets) body.push({ text: `reset = program.declare("reset", "BIT", ${circuit.qubits})` });
   for (const { op, column } of operations(circuit)) for (const text of lines(op, t)) body.push({ text, column });
