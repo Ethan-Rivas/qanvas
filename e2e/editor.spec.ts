@@ -10,6 +10,8 @@ async function drag(page: Page, from: Locator, to: Locator) {
   await page.mouse.move(a.x + a.width / 2 + 10, a.y + a.height / 2, { steps: 3 });
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 10 });
   await page.mouse.up();
+  // dnd-kit swallows every click for 50 ms after a drop, so a click right after a drag would be lost.
+  await page.waitForTimeout(100);
 }
 
 const cell = (page: Page, column: number, qubit: number) => page.locator(`.cell[data-column="${column}"][data-qubit="${qubit}"]`);
@@ -182,7 +184,9 @@ test('downloads the circuit as a notebook, a script or OpenQASM', async ({ page 
   expect(await readFile((await qasm.path())!, 'utf8')).toContain('cx q[0],q[1];');
 
   await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeHidden();
   await drag(page, paletteGate(page, /Hadamard/), cell(page, 2, 0));
+  await expect(page.getByRole('region', { name: 'Circuit summary' }).getByRole('listitem').nth(2)).toHaveText('Step 3: Hadamard on q0.');
   await page.getByRole('button', { name: 'Download', exact: true }).click();
   const [edited] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Notebook (.ipynb)' }).click()]);
   expect(edited.suggestedFilename()).toBe('circuit-cirq.ipynb');
