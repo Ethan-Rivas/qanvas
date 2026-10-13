@@ -11,7 +11,8 @@ from pathlib import Path
 
 import numpy as np
 from qiskit import QuantumCircuit
-from qiskit.quantum_info import DensityMatrix, Kraus, Statevector
+from qiskit.quantum_info import DensityMatrix, Kraus, Statevector, partial_trace
+from qiskit_aer.noise import depolarizing_error
 
 ROOT = Path(__file__).resolve().parent.parent
 EXAMPLES = ROOT / "src" / "examples" / "circuits.json"
@@ -22,6 +23,10 @@ RANDOM_CIRCUITS = 200
 DYNAMIC_CIRCUITS = 36
 MEASURE = Kraus([np.array([[1, 0], [0, 0]]), np.array([[0, 0], [0, 1]])])
 RESET = Kraus([np.array([[1, 0], [0, 0]]), np.array([[0, 1], [0, 0]])])
+NOISY_CIRCUITS = 24
+MAX_RECORDS = 3
+RECORD = QuantumCircuit(2)
+RECORD.cx(0, 1)
 
 FIXED_GATES = {"H": "h", "X": "x", "Y": "y", "Z": "z", "S": "s", "Sdg": "sdg", "T": "t", "Tdg": "tdg"}
 ANGLE_GATES = {"RX": "rx", "RY": "ry", "RZ": "rz", "P": "p"}
@@ -131,6 +136,147 @@ def density_case(name, circuit):
     return {"name": name, "circuit": circuit, "density": {"re": rho.real.tolist(), "im": rho.imag.tolist()}}
 
 
+def noise(one=0.0, two=0.0, readout=0.0):
+    return {"oneQubit": one, "twoQubit": two, "readout": readout}
+
+
+def read_measurements(circuit):
+    """(column, qubit) of each measurement a condition reads: that qubit's latest one before it."""
+    read, latest = set(), {}
+    for c, column in enumerate(circuit["columns"]):
+        for op in column:
+            if "condition" in op:
+                read.add(latest[op["condition"]["qubit"]])
+        for op in column:
+            if op["gate"] == "M":
+                latest.update((q, (c, q)) for q in op["targets"])
+    return read
+
+
+def depolarizing(p, k):
+    return Kraus(depolarizing_error(p, k).to_quantumchannel())
+
+
+def misreading(p):
+    return Kraus([math.sqrt(1 - p) * np.eye(2), math.sqrt(p) * np.array([[0, 1], [1, 0]])])
+
+
+def when_recorded(channel, value):
+    """`channel` on the target only where the record qubit (qarg 0) holds `value`."""
+    on, off = np.diag([1 - value, value]), np.diag([value, 1 - value])
+    # Qiskit's matrices put qarg 0 last in the tensor product.
+    return Kraus([np.kron(k, on) for k in channel.data] + [np.kron(np.eye(2), off)])
+
+
+def noisy_density(circuit):
+    """The final state with Qiskit Aer's depolarizing channels after each gate.
+
+    Each measurement a condition reads is copied onto an extra record qubit, which the readout error
+    can flip, so the condition reads the record rather than the qubit, like a classical bit on hardware.
+    The record qubits are traced out at the end.
+    """
+    n, rates = circuit["qubits"], circuit["noise"]
+    partway = partway_measurements(circuit)
+    records = {key: n + i for i, key in enumerate(sorted(read_measurements(circuit)))}
+    total = n + len(records)
+    dm = DensityMatrix.from_label("0" * total)
+    record_of = {}
+    for c, column in enumerate(circuit["columns"]):
+        for op in column:
+            name, qubits = op["gate"], op.get("controls", []) + op["targets"]
+            if name == "M":
+                for q in op["targets"]:
+                    if (c, q) in partway:
+                        dm = dm.evolve(MEASURE, qargs=[q])
+                    if (c, q) in records:
+                        record = records[(c, q)]
+                        dm = dm.evolve(RECORD, qargs=[q, record])
+                        if rates["readout"] > 0:
+                            dm = dm.evolve(misreading(rates["readout"]), qargs=[record])
+                        record_of[q] = record
+                continue
+            if name == "RESET":
+                dm = dm.evolve(RESET, qargs=op["targets"])
+                continue
+            p = rates["oneQubit"] if len(qubits) == 1 else rates["twoQubit"]
+            if "condition" in op:
+                condition, target = op["condition"], op["targets"][0]
+                record = record_of[condition["qubit"]]
+                plain = {key: value for key, value in op.items() if key != "condition"}
+                unitary = to_qiskit({"qubits": 1, "columns": [[{**plain, "targets": [0]}]]}).to_gate()
+                dm = dm.evolve(unitary.control(1, ctrl_state=condition["value"]), qargs=[record, target])
+                if p > 0:
+                    dm = dm.evolve(when_recorded(depolarizing(p, 1), condition["value"]), qargs=[record, target])
+            else:
+                dm = dm.evolve(to_qiskit({"qubits": total, "columns": [[op]]}))
+                if p > 0:
+                    dm = dm.evolve(depolarizing(p, len(qubits)), qargs=qubits)
+    return partial_trace(dm, list(range(n, total))) if records else dm
+
+
+def readout_probabilities(rho, qubits, readout):
+    p = np.real(np.diag(rho)).copy()
+    for q in range(qubits):
+        # rho is already in Qanvas order, where q0 is the most significant bit.
+        flipped = p[np.arange(len(p)) ^ (1 << (qubits - 1 - q))]
+        p = (1 - readout) * p + readout * flipped
+    return p
+
+
+def noise_case(name, circuit):
+    rho = qanvas_order_matrix(noisy_density(circuit).data, circuit["qubits"])
+    flat = rho.reshape(-1)
+    return {
+        "name": name,
+        "circuit": circuit,
+        "density": {"re": flat.real.tolist(), "im": flat.imag.tolist()},
+        "probabilities": readout_probabilities(rho, circuit["qubits"], circuit["noise"]["readout"]).tolist(),
+    }
+
+
+def fixed_noise_cases():
+    cnot = {"gate": "X", "controls": [0], "targets": [1]}
+    if_measured = lambda qubit, value: {"condition": {"qubit": qubit, "value": value}}
+    return [
+        noise_case("depolarizing after X", {"qubits": 1, "columns": [[gate("X", 0)]], "noise": noise(one=0.1)}),
+        noise_case("noisy Bell pair", {"qubits": 2, "columns": [[gate("H", 0)], [cnot]], "noise": noise(0.02, 0.05, 0.03)}),
+        noise_case("noisy Toffoli and SWAP", {"qubits": 3, "columns": [[gate("H", 0), gate("H", 1)], [{"gate": "X", "controls": [0, 1], "targets": [2]}], [gate("SWAP", 0, 2)]], "noise": noise(0.01, 0.08)}),
+        noise_case("readout only", {"qubits": 2, "columns": [[gate("H", 0)], [cnot], [gate("M", 0, 1)]], "noise": noise(readout=0.2)}),
+        noise_case("a misread measurement drives a condition", {"qubits": 2, "columns": [[gate("X", 0)], [gate("M", 0)], [gate("X", 1, **if_measured(0, 1))]], "noise": noise(readout=0.2)}),
+        noise_case("two conditions read one measurement", {"qubits": 3, "columns": [[gate("H", 0)], [gate("M", 0)], [gate("X", 1, **if_measured(0, 1)), gate("X", 2, **if_measured(0, 1))]], "noise": noise(readout=0.1)}),
+        noise_case("noise on a gate that may not run", {"qubits": 2, "columns": [[gate("X", 0)], [gate("M", 0)], [gate("X", 1, **if_measured(0, 0))]], "noise": noise(one=0.1)}),
+        noise_case("reset with noise", {"qubits": 2, "columns": [[gate("H", 0)], [cnot], [gate("RESET", 0)], [gate("RY", 0, angle=0.9)]], "noise": noise(0.03, 0.04, 0.05)}),
+    ] + [
+        noise_case(f"noisy teleportation θ={theta:.4g} φ={phi:.4g}", {**teleportation(theta, phi), "noise": noise(0.01, 0.03, 0.05)})
+        for theta, phi in [(0.7, 1.3), (math.pi / 2, -2.0)]
+    ]
+
+
+def random_noise_cases():
+    rng = random.Random(SEED + 2)
+    cases = []
+    for i in range(NOISY_CIRCUITS):
+        qubits = 1 + i % 4
+        if i % 2 == 0:
+            columns = []
+            for _ in range(rng.randint(1, 10)):
+                free = list(range(qubits))
+                rng.shuffle(free)
+                column = [random_op(rng, free)]
+                while free and rng.random() < 0.7:
+                    column.append(random_op(rng, free))
+                columns.append(column)
+            columns.append([gate("M", *range(qubits))])
+            circuit = {"qubits": qubits, "columns": columns}
+        else:
+            circuit = random_dynamic_circuit(rng, qubits)
+            while len(read_measurements(circuit)) > MAX_RECORDS:
+                circuit = random_dynamic_circuit(rng, qubits)
+        circuit["noise"] = noise(round(rng.uniform(0, 0.1), 3), round(rng.uniform(0, 0.1), 3), round(rng.uniform(0, 0.2), 3))
+        cases.append(noise_case(f"random noisy {i:03d} ({qubits} qubits)", circuit))
+    return cases
+
+
 def gate(name, *targets, **extra):
     return {"gate": name, "targets": list(targets), **extra}
 
@@ -148,60 +294,63 @@ def fixed_dynamic_cases():
     ]
 
 
+def teleportation(theta, phi):
+    return {"qubits": 3, "columns": [
+        [gate("RY", 0, angle=theta), gate("H", 1)],
+        [gate("RZ", 0, angle=phi), {"gate": "X", "controls": [1], "targets": [2]}],
+        [{"gate": "X", "controls": [0], "targets": [1]}],
+        [gate("H", 0)],
+        [gate("M", 0, 1)],
+        [gate("X", 2, condition={"qubit": 1, "value": 1})],
+        [gate("Z", 2, condition={"qubit": 0, "value": 1})],
+    ]}
+
+
 def teleportation_cases():
-    cases = []
-    for theta in [0, 0.7, math.pi / 2, 2.2, math.pi]:
-        for phi in [0, 1.3, -2.0]:
-            circuit = {"qubits": 3, "columns": [
-                [gate("RY", 0, angle=theta), gate("H", 1)],
-                [gate("RZ", 0, angle=phi), {"gate": "X", "controls": [1], "targets": [2]}],
-                [{"gate": "X", "controls": [0], "targets": [1]}],
-                [gate("H", 0)],
-                [gate("M", 0, 1)],
-                [gate("X", 2, condition={"qubit": 1, "value": 1})],
-                [gate("Z", 2, condition={"qubit": 0, "value": 1})],
-            ]}
-            cases.append(density_case(f"teleportation θ={theta:.4g} φ={phi:.4g}", circuit))
-    return cases
+    return [
+        density_case(f"teleportation θ={theta:.4g} φ={phi:.4g}", teleportation(theta, phi))
+        for theta in [0, 0.7, math.pi / 2, 2.2, math.pi]
+        for phi in [0, 1.3, -2.0]
+    ]
+
+
+def random_dynamic_circuit(rng, qubits):
+    columns = []
+    readable = set()
+    for _ in range(rng.randint(2, 12)):
+        free = list(range(qubits))
+        rng.shuffle(free)
+        column = []
+        while free and (not column or rng.random() < 0.7):
+            kind = rng.choice(["gate", "gate", "measure", "reset", "conditional"])
+            candidates = [q for q in free if q in readable]
+            if kind == "measure":
+                column.append(gate("M", free.pop()))
+            elif kind == "reset":
+                column.append(gate("RESET", free.pop()))
+            elif kind == "conditional" and candidates and len(free) >= 2:
+                read = candidates[0]
+                free.remove(read)
+                name = rng.choice(list(FIXED_GATES) + list(ANGLE_GATES))
+                op = gate(name, free.pop(), condition={"qubit": read, "value": rng.randint(0, 1)})
+                if name in ANGLE_GATES:
+                    op["angle"] = rng.uniform(-2 * math.pi, 2 * math.pi)
+                column.append(op)
+            else:
+                column.append(random_op(rng, free))
+        columns.append(column)
+        for op in column:
+            readable.difference_update(op["targets"] + op.get("controls", []))
+        readable.update(q for op in column if op["gate"] == "M" for q in op["targets"])
+    circuit = {"qubits": qubits, "columns": columns}
+    if not partway_measurements(circuit) and not any(op["gate"] == "RESET" for column in columns for op in column):
+        columns.append([gate("RESET", 0)])
+    return circuit
 
 
 def random_dynamic_cases():
     rng = random.Random(SEED + 1)
-    cases = []
-    for i in range(DYNAMIC_CIRCUITS):
-        qubits = 1 + i % 6
-        columns = []
-        readable = set()
-        for _ in range(rng.randint(2, 12)):
-            free = list(range(qubits))
-            rng.shuffle(free)
-            column = []
-            while free and (not column or rng.random() < 0.7):
-                kind = rng.choice(["gate", "gate", "measure", "reset", "conditional"])
-                candidates = [q for q in free if q in readable]
-                if kind == "measure":
-                    column.append(gate("M", free.pop()))
-                elif kind == "reset":
-                    column.append(gate("RESET", free.pop()))
-                elif kind == "conditional" and candidates and len(free) >= 2:
-                    read = candidates[0]
-                    free.remove(read)
-                    name = rng.choice(list(FIXED_GATES) + list(ANGLE_GATES))
-                    op = gate(name, free.pop(), condition={"qubit": read, "value": rng.randint(0, 1)})
-                    if name in ANGLE_GATES:
-                        op["angle"] = rng.uniform(-2 * math.pi, 2 * math.pi)
-                    column.append(op)
-                else:
-                    column.append(random_op(rng, free))
-            columns.append(column)
-            for op in column:
-                readable.difference_update(op["targets"] + op.get("controls", []))
-            readable.update(q for op in column if op["gate"] == "M" for q in op["targets"])
-        circuit = {"qubits": qubits, "columns": columns}
-        if not partway_measurements(circuit) and not any(op["gate"] == "RESET" for column in columns for op in column):
-            columns.append([gate("RESET", 0)])
-        cases.append(density_case(f"random dynamic {i:03d} ({qubits} qubits)", circuit))
-    return cases
+    return [density_case(f"random dynamic {i:03d} ({1 + i % 6} qubits)", random_dynamic_circuit(rng, 1 + i % 6)) for i in range(DYNAMIC_CIRCUITS)]
 
 
 def prepared(qubits, column):
@@ -300,3 +449,4 @@ if __name__ == "__main__":
     write("examples", example_cases())
     write("random", random_cases())
     write("mid-circuit", fixed_dynamic_cases() + teleportation_cases() + random_dynamic_cases())
+    write("noise", fixed_noise_cases() + random_noise_cases())
