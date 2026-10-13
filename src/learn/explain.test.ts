@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Circuit } from '../circuit/model';
 import { translator } from '../i18n/i18n';
 import { blochVector, formatState } from '../sim/analysis';
-import { simulate } from '../sim/simulator';
+import { simulate, type StateVector } from '../sim/simulator';
 import { explainStep } from './explain';
 
 const t = translator('en');
@@ -14,17 +14,17 @@ function explain(circuit: Circuit, step: number) {
 
 describe('state analysis', () => {
   it('finds each qubit’s Bloch vector, shrinking to zero when fully entangled', () => {
-    const plusI = simulate({ qubits: 2, columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'S', targets: [0] }]] }).at(-1)!;
+    const plusI = simulate({ qubits: 2, columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'S', targets: [0] }]] }).at(-1)! as StateVector;
     const y = blochVector(plusI, 0);
     expect([y.x, y.y, y.z].map((v) => +v.toFixed(12))).toEqual([0, 1, 0]);
     expect(blochVector(plusI, 1).z).toBeCloseTo(1, 12);
 
-    const bell = simulate({ qubits: 2, columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'X', controls: [0], targets: [1] }]] }).at(-1)!;
+    const bell = simulate({ qubits: 2, columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'X', controls: [0], targets: [1] }]] }).at(-1)! as StateVector;
     expect(Math.hypot(...Object.values(blochVector(bell, 1)))).toBeCloseTo(0, 12);
   });
 
   it('writes states as short sums of kets', () => {
-    const state = (circuit: Circuit) => formatState(simulate(circuit).at(-1)!);
+    const state = (circuit: Circuit) => formatState(simulate(circuit).at(-1)! as StateVector);
     expect(state({ qubits: 3, columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'X', controls: [0], targets: [1] }]] })).toBe('(|000⟩ + |110⟩)/√2');
     expect(state({ qubits: 1, columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'T', targets: [0] }]] })).toBe('(|0⟩ + e^(iπ/4)|1⟩)/√2');
     expect(state({ qubits: 1, columns: [[{ gate: 'X', targets: [0] }], [{ gate: 'Y', targets: [0] }]] })).toBe('−i|0⟩');

@@ -17,3 +17,18 @@ it('simulates 12 qubits and 50 columns in under 100 ms', () => {
   probabilities(states[states.length - 1]);
   expect(performance.now() - start).toBeLessThan(100);
 });
+
+it('simulates a dynamic 8-qubit circuit with 50 columns in under 100 ms', () => {
+  const columns: Operation[][] = Array.from({ length: 50 }, (_, c) => [
+    { gate: 'H', targets: [c % 8] },
+    { gate: 'X', controls: [(c + 2) % 8], targets: [(c + 3) % 8] },
+    c % 5 === 4 ? { gate: 'RESET', targets: [(c + 5) % 8] } : { gate: 'M', targets: [(c + 5) % 8] },
+  ]);
+  const circuit: Circuit = { qubits: 8, columns };
+  simulate(circuit);
+
+  const start = performance.now();
+  const states = simulate(circuit);
+  probabilities(states[states.length - 1]);
+  expect(performance.now() - start).toBeLessThan(100);
+});
