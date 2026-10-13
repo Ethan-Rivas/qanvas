@@ -262,6 +262,7 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 - The lab's `/run` gets noise and the counted qubits from Qanvas only once quantum-lab ships `docs/superpowers/specs/2026-10-13-lab-run-noise.md`. Until then, circuits that are noisy, measure partway through or reset show the size note above the browser limit.
 - Editing the Cirq code of a noisy circuit in quantum-lab fails until the bridge's `/import` skips noise channels (same spec, item 5).
 - Learn mode doesn't explain noise yet; that's milestone 3.
+- Noise rates written in edited Qiskit or Cirq code don't change the circuit's noise; set them in the noise panel.
 
 ## After 0.1, and open questions
 
