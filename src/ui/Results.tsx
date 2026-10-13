@@ -1,4 +1,4 @@
-import { browserLimit, hasGateNoise, hasNoise, isDynamic } from '../circuit/model';
+import { browserLimit, hasGateNoise, hasNoise, isDynamic, sameCircuit, withoutNoise } from '../circuit/model';
 import { currentStep, useEditor } from '../editor/store';
 import { formatPercent } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
@@ -101,7 +101,7 @@ export function Results({ result, ideal, pending }: { result: SimulationResult |
   const exact = state ? probabilities(state) : new Float64Array();
   const readout = circuit.noise?.readout ?? 0;
   const p = withReadout(exact, qubits, readout);
-  const idealState = hasGateNoise(circuit) ? ideal && stateAt(ideal, step) : state;
+  const idealState = hasGateNoise(circuit) ? result && ideal && sameCircuit(ideal.circuit, withoutNoise(result.circuit)) && stateAt(ideal, step) : state;
   const idealP = hasNoise(circuit) && idealState && idealState.qubits === qubits ? probabilities(idealState) : null;
   const all = Array.from(p.keys());
   const bars = p.length <= MAX_ROWS ? all : mostLikely(p, all.filter((i) => p[i] > SHOWN_PROBABILITY));
