@@ -1,7 +1,7 @@
 import { MAX_QUBITS, validateCircuit, type Circuit, type GateName, type Operation } from '../circuit/model';
 import { evaluate } from './qasmImport';
 
-export type QuirkErrorCode = 'invalid' | 'too-many-qubits' | 'unsupported' | 'after-measure';
+export type QuirkErrorCode = 'invalid' | 'too-many-qubits' | 'unsupported';
 export type QuirkResult = { ok: true; circuit: Circuit } | { ok: false; error: { code: QuirkErrorCode; detail?: string } };
 
 const FIXED: Record<string, GateName> = { H: 'H', X: 'X', Y: 'Y', Z: 'Z', 'Z^½': 'S', 'Z^-½': 'Sdg', 'Z^¼': 'T', 'Z^-¼': 'Tdg' };
@@ -160,7 +160,6 @@ export function importQuirk(input: string): QuirkResult {
 
   const circuit = { qubits, columns };
   const errors = validateCircuit(circuit);
-  if (errors.some((e) => e.code === 'after-measure')) return { ok: false, error: { code: 'after-measure' } };
   if (errors.length > 0) return { ok: false, error: { code: 'invalid' } };
   return { ok: true, circuit };
 }

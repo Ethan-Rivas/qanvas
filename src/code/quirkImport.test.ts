@@ -57,7 +57,7 @@ describe('Quirk import', () => {
   it('refuses links it cannot import exactly and names what is missing', () => {
     const grover = { cols: [['H', 'H'], ['~oracle'], ['◦', 'X'], ['•', 'H'], [{ id: 'Rxft', arg: 'pi t' }]], gates: [{ id: '~oracle', name: 'Oracle', circuit: { cols: [] } }] };
     expect(importQuirk(quirkLink(grover))).toEqual({ ok: false, error: { code: 'unsupported', detail: 'Oracle, ◦, •H, Rxft(pi t)' } });
-    expect(importQuirk(quirkLink({ cols: [['Measure'], ['H']] }))).toEqual({ ok: false, error: { code: 'after-measure' } });
+    expect(importQuirk(quirkLink({ cols: [['Measure'], ['H']] }))).toEqual({ ok: true, circuit: { qubits: 1, columns: [[{ gate: 'M', targets: [0] }], [{ gate: 'H', targets: [0] }]] } });
     expect(importQuirk('https://algassert.com/quirk#circuit={"cols":')).toEqual({ ok: false, error: { code: 'invalid' } });
     expect(importQuirk(quirkLink({ cols: [[...Array(24).fill(1), 'H']] }))).toEqual({ ok: false, error: { code: 'too-many-qubits', detail: '25' } });
   });

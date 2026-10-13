@@ -2,9 +2,11 @@ import { createOperation, qubitsNeeded, type GateKind } from './gates';
 import {
   MAX_QUBITS,
   operationQubits,
+  referencedQubits,
   validateCircuit,
   type Circuit,
   type CircuitErrorCode,
+  type Condition,
   type Operation,
 } from './model';
 
@@ -30,8 +32,8 @@ function remap(op: Operation, f: (q: number) => number): Operation {
 }
 
 function fits(column: Operation[], op: Operation): boolean {
-  const used = new Set(column.flatMap(operationQubits));
-  return operationQubits(op).every((q) => !used.has(q));
+  const used = new Set(column.flatMap(referencedQubits));
+  return referencedQubits(op).every((q) => !used.has(q));
 }
 
 /** Adds `op` to the column, or opens a new column there when its qubits are taken. */
@@ -108,18 +110,31 @@ export function setAngle(circuit: Circuit, at: OpLocation, angle: number): EditR
   return finish(circuit.qubits, columns, at);
 }
 
+export function setCondition(circuit: Circuit, at: OpLocation, condition: Condition | null): EditResult {
+  const columns = copyColumns(circuit);
+  const op = { ...columns[at.column][at.index] };
+  delete op.condition;
+  if (condition) op.condition = condition;
+  columns[at.column][at.index] = op;
+  return finish(circuit.qubits, columns, at);
+}
+
 export function addQubit(circuit: Circuit, limit = MAX_QUBITS): EditResult {
   if (circuit.qubits >= limit) return { ok: false, error: 'too-many-qubits' };
   return { ok: true, circuit: { ...circuit, qubits: circuit.qubits + 1 } };
 }
 
-/** Deletes the qubit and every gate that touches it; the qubits below move up one row. */
+/** Deletes the qubit and every gate that touches or reads it; the qubits below move up one row. */
 export function removeQubit(circuit: Circuit, qubit: number): EditResult {
   if (circuit.qubits <= 1) return { ok: false, error: 'too-few-qubits' };
+  const shift = (q: number) => (q > qubit ? q - 1 : q);
   const columns = circuit.columns.map((column) =>
     column
-      .filter((op) => !operationQubits(op).includes(qubit))
-      .map((op) => remap(op, (q) => (q > qubit ? q - 1 : q))),
+      .filter((op) => !referencedQubits(op).includes(qubit))
+      .map((op) => {
+        const moved = remap(op, shift);
+        return op.condition ? { ...moved, condition: { ...op.condition, qubit: shift(op.condition.qubit) } } : moved;
+      }),
   );
   return finish(circuit.qubits - 1, columns);
 }

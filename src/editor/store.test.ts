@@ -16,8 +16,9 @@ it('undoes and redoes edits, and selects the gate that was placed', () => {
 });
 
 it('keeps the circuit and history unchanged when an edit is rejected', () => {
-  const { placeGate } = useEditor.getState();
-  placeGate('M', { column: 0, qubit: 0 });
-  placeGate('H', { column: 1, qubit: 0 });
-  expect(useEditor.getState()).toMatchObject({ notice: 'after-measure', past: [{ circuit: EMPTY_CIRCUIT, exampleId: null }] });
+  const { placeGate, setCondition } = useEditor.getState();
+  placeGate('H', { column: 0, qubit: 0 });
+  const before = useEditor.getState().past;
+  setCondition({ column: 0, index: 0 }, { qubit: 1, value: 1 });
+  expect(useEditor.getState()).toMatchObject({ notice: 'condition', past: before });
 });

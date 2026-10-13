@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as edits from '../circuit/edits';
 import type { Cell, EditError, EditResult, OpLocation } from '../circuit/edits';
 import type { GateKind } from '../circuit/gates';
-import { validateCircuit, type Circuit, type Operation } from '../circuit/model';
+import { validateCircuit, type Circuit, type Condition, type Operation } from '../circuit/model';
 import type { ExampleId } from '../examples/examples';
 import { qubitLimit, useLab } from '../lab/lab';
 import type { Language } from '../i18n/i18n';
@@ -38,6 +38,7 @@ export interface EditorState {
   movePart(from: OpLocation & { qubit: number }, to: Cell): OpLocation | null;
   removeOperation(at: OpLocation): void;
   setAngle(at: OpLocation, angle: number): void;
+  setCondition(at: OpLocation, condition: Condition | null): void;
   addQubit(): void;
   removeQubit(qubit: number): void;
   copySelection(): void;
@@ -132,6 +133,7 @@ export const useEditor = create<EditorState>()((set, get) => {
     movePart: (from, to) => apply(edits.movePart(get().circuit, from, to)),
     removeOperation: (at) => apply(edits.removeOperation(get().circuit, at)),
     setAngle: (at, angle) => apply(edits.setAngle(get().circuit, at, angle)),
+    setCondition: (at, condition) => apply(edits.setCondition(get().circuit, at, condition)),
     addQubit: () => apply(edits.addQubit(get().circuit, qubitLimit(useLab.getState().lab)), true),
     removeQubit: (qubit) => apply(edits.removeQubit(get().circuit, qubit)),
 

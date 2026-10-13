@@ -17,7 +17,7 @@ const MIN_COLUMNS = 6;
 
 const NOTICE_KEYS: Partial<Record<Notice, MessageKey>> = {
   'bad-link': 'error.bad-link',
-  'after-measure': 'error.after-measure',
+  condition: 'error.condition',
   'too-few-qubits': 'error.too-few-qubits',
   'too-many-qubits': 'error.too-many-qubits',
 };

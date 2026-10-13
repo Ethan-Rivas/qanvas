@@ -6,7 +6,7 @@ export type GateKind =
   | 'S' | 'Sdg' | 'T' | 'Tdg' | 'P'
   | 'RX' | 'RY' | 'RZ'
   | 'CNOT' | 'CZ' | 'SWAP' | 'CCX'
-  | 'M';
+  | 'M' | 'RESET';
 
 export type GateFamily = 'hadamard' | 'pauli' | 'phase' | 'rotation' | 'multi' | 'measure';
 
@@ -28,6 +28,7 @@ export const GATE_FAMILY: Record<GateKind, GateFamily> = {
   SWAP: 'multi',
   CCX: 'multi',
   M: 'measure',
+  RESET: 'measure',
 };
 
 export const GATE_SYMBOL: Record<GateKind, string> = {
@@ -48,6 +49,7 @@ export const GATE_SYMBOL: Record<GateKind, string> = {
   SWAP: 'SWAP',
   CCX: 'CCX',
   M: 'M',
+  RESET: '|0⟩',
 };
 
 const DEFAULT_ANGLE = Math.PI / 2;

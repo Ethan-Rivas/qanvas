@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { movePart, placeGate, removeQubit, type EditResult } from './edits';
+import { movePart, placeGate, removeQubit, setCondition, type EditResult } from './edits';
 import type { Circuit } from './model';
 
 function ok(result: EditResult) {
@@ -39,7 +39,7 @@ describe('circuit edits', () => {
 
   it('rejects edits that break the circuit rules', () => {
     const measured: Circuit = { qubits: 1, columns: [[{ gate: 'M', targets: [0] }]] };
-    expect(placeGate(measured, 'H', { column: 1, qubit: 0 })).toEqual({ ok: false, error: 'after-measure' });
+    expect(placeGate(measured, 'H', { column: 1, qubit: 0 })).toMatchObject({ ok: true });
     expect(placeGate(measured, 'CNOT', { column: 0, qubit: 0 })).toEqual({ ok: false, error: 'too-few-qubits' });
   });
 
@@ -49,5 +49,15 @@ describe('circuit edits', () => {
       columns: [[{ gate: 'H', targets: [0] }, { gate: 'X', targets: [2] }], [{ gate: 'Z', controls: [0], targets: [1] }]],
     };
     expect(ok(removeQubit(circuit, 1)).circuit).toEqual({ qubits: 2, columns: [[{ gate: 'H', targets: [0] }, { gate: 'X', targets: [1] }]] });
+  });
+
+  it('sets and clears a condition, and drops gates that read a removed qubit', () => {
+    const circuit: Circuit = { qubits: 3, columns: [[{ gate: 'M', targets: [1] }], [{ gate: 'X', targets: [2] }]] };
+    const conditioned = ok(setCondition(circuit, { column: 1, index: 0 }, { qubit: 1, value: 1 })).circuit;
+    expect(conditioned.columns[1][0]).toEqual({ gate: 'X', targets: [2], condition: { qubit: 1, value: 1 } });
+    expect(ok(setCondition(conditioned, { column: 1, index: 0 }, null)).circuit).toEqual(circuit);
+    expect(setCondition(circuit, { column: 0, index: 0 }, { qubit: 1, value: 1 })).toEqual({ ok: false, error: 'condition' });
+    expect(ok(removeQubit(conditioned, 1)).circuit).toEqual({ qubits: 2, columns: [] });
+    expect(ok(removeQubit(conditioned, 0)).circuit.columns[1][0]).toEqual({ gate: 'X', targets: [1], condition: { qubit: 0, value: 1 } });
   });
 });
