@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
-import type { Circuit } from '../circuit/model';
+import type { Circuit, Noise } from '../circuit/model';
 import { blochLength, blochVector, pureVector } from './analysis';
-import { finalState, isMixed, probabilities } from './simulator';
+import { finalState, isMixed, probabilities, simulate, withReadout } from './simulator';
 
 const probs = (circuit: Circuit) => [...probabilities(finalState(circuit))].map((p) => Math.round(p * 1e9) / 1e9);
 
@@ -43,4 +43,42 @@ it('teleports a qubit state with real measurements and corrections', () => {
 
 it('keeps the state vector for circuits that only measure at the end', () => {
   expect(isMixed(finalState({ qubits: 1, columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'M', targets: [0] }]] }))).toBe(false);
+});
+
+const round = (p: ArrayLike<number>) => Array.from(p, (v) => Math.round(v * 1e9) / 1e9);
+const noise = (rates: Partial<Noise>): Noise => ({ oneQubit: 0, twoQubit: 0, readout: 0, ...rates });
+
+it('leaves a qubit in a random state with probability p after each gate', () => {
+  const state = finalState({ qubits: 1, columns: [[{ gate: 'X', targets: [0] }]], noise: noise({ oneQubit: 0.1 }) });
+  expect(round(probabilities(state))).toEqual([0.05, 0.95]);
+  expect(blochVector(state, 0).z).toBeCloseTo(-0.9, 12);
+});
+
+it('lets a misread measurement drive every gate that depends on it the same way', () => {
+  const states = simulate({
+    qubits: 3,
+    columns: [
+      [{ gate: 'H', targets: [0] }],
+      [{ gate: 'M', targets: [0] }],
+      [{ gate: 'X', targets: [1], condition: { qubit: 0, value: 1 } }, { gate: 'X', targets: [2], condition: { qubit: 0, value: 1 } }],
+    ],
+    noise: noise({ readout: 0.1 }),
+  });
+  expect(round(probabilities(states[2]))).toEqual([0.5, 0, 0, 0, 0.5, 0, 0, 0]);
+  expect(round(probabilities(states[3]))).toEqual([0.45, 0, 0, 0.05, 0.05, 0, 0, 0.45]);
+});
+
+it('adds noise to a conditional gate only when it runs', () => {
+  const state = finalState({
+    qubits: 2,
+    columns: [[{ gate: 'X', targets: [0] }], [{ gate: 'M', targets: [0] }], [{ gate: 'X', targets: [1], condition: { qubit: 0, value: 0 } }]],
+    noise: noise({ oneQubit: 0.1 }),
+  });
+  expect(round(probabilities(state))).toEqual([0.0025, 0.0475, 0.95, 0]);
+});
+
+it('applies readout error to what measuring reports, keeping the state vector when it is the only noise', () => {
+  const state = finalState({ qubits: 2, columns: [[{ gate: 'X', targets: [0] }]], noise: noise({ readout: 0.1 }) });
+  expect(isMixed(state)).toBe(false);
+  expect(round(withReadout(probabilities(state), 2, 0.1))).toEqual([0.09, 0.01, 0.81, 0.09]);
 });
