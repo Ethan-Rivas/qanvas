@@ -3,10 +3,10 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { expect, test } from 'vitest';
-import type { Circuit } from '../circuit/model';
+import { withoutNoise, type Circuit } from '../circuit/model';
 import { translator } from '../i18n/i18n';
 import { densityOf } from '../sim/analysis';
-import { finalState, probabilities } from '../sim/simulator';
+import { finalState, probabilities, withReadout } from '../sim/simulator';
 import { countedQubits, measuresAtEnd, notebook, PYTHON_FORMATS, pythonScript, SHOTS } from './download';
 import { CODE_FORMATS, codeText, generateCode } from './generate';
 import { importQasm } from './qasmImport';
@@ -74,7 +74,7 @@ test(`exported code runs in Python and matches Qanvas on ${cases.length} circuit
 
 /** Probabilities of each outcome over the counted qubits, keyed with q0 first like the downloads. */
 function outcomeProbabilities(circuit: Circuit): Map<string, number> {
-  const p = probabilities(finalState(circuit));
+  const p = withReadout(probabilities(finalState(circuit)), circuit.qubits, circuit.noise?.readout ?? 0);
   const counted = countedQubits(circuit);
   const result = new Map<string, number>();
   p.forEach((value, index) => {
@@ -159,6 +159,30 @@ test('code for circuits that measure partway through runs and agrees with Qanvas
     const b = densityOf(finalState(circuit));
     const worst = Math.max(...Array.from(a.re, (re, k) => Math.hypot(re - b.re[k], a.im[k] - b.im[k])));
     if (!(worst <= TOLERANCE)) failures.push(`${name} [import from Qiskit]: off by ${worst}`);
+  });
+  expect(failures).toEqual([]);
+}, 1_200_000);
+
+test('noisy circuits run in Qiskit and Cirq and agree with Qanvas; pyQuil runs them without the noise', () => {
+  const t = translator('en');
+  const noisy: Case[] = JSON.parse(readFileSync(join(ROOT, 'reference/data/noise.json'), 'utf8'));
+  const input = noisy.map(({ name, circuit }) => ({
+    name,
+    script: Object.fromEntries(PYTHON_FORMATS.map((format) => [format, pythonScript(format, circuit, t)])),
+  }));
+  const output = runInLab('scripts/run_downloads.py', input) as { name: string; results: Record<string, { counts: Record<string, number> } | { error: string }> }[];
+
+  const failures: string[] = [];
+  output.forEach(({ name, results }, i) => {
+    const { circuit } = noisy[i];
+    const withNoise = outcomeProbabilities(circuit);
+    const expected: Record<string, Map<string, number>> = { qiskit: withNoise, cirq: withNoise, pyquil: outcomeProbabilities(withoutNoise(circuit)) };
+    if (Object.keys(results).length !== PYTHON_FORMATS.length) failures.push(`${name}: ${Object.keys(results).length} runs instead of ${PYTHON_FORMATS.length}`);
+    for (const format of PYTHON_FORMATS) {
+      const result = results[`${format} script`];
+      if (!result || 'error' in result) failures.push(`${name} [${format}]: ${result ? result.error : 'no result'}`);
+      else failures.push(...countFailures(`${name} [${format}]`, result.counts, expected[format]));
+    }
   });
   expect(failures).toEqual([]);
 }, 1_200_000);
