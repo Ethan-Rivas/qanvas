@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isDynamic, partwayMeasurements, validateCircuit, type Circuit } from './model';
+import { NOISE_LIMITS, isDynamic, partwayMeasurements, usesDensity, validateCircuit, type Circuit } from './model';
 
 const ghz: Circuit = {
   qubits: 3,
@@ -69,5 +69,19 @@ describe('validateCircuit', () => {
       [3, 'condition'],
       [4, 'condition'],
     ]);
+  });
+  it('accepts noise within the slider limits and rejects anything else', () => {
+    const bell: Circuit = { qubits: 2, columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'X', controls: [0], targets: [1] }]] };
+    expect(validateCircuit({ ...bell, noise: NOISE_LIMITS })).toEqual([]);
+    for (const noise of [{ oneQubit: 0.2, twoQubit: 0, readout: 0 }, { oneQubit: -0.01, twoQubit: 0, readout: 0 }, { oneQubit: 0, readout: 0 }, { oneQubit: NaN, twoQubit: 0, readout: 0 }]) {
+      expect(validateCircuit({ ...bell, noise } as Circuit)).toEqual([{ code: 'noise' }]);
+    }
+  });
+
+  it('uses the density matrix for gate noise but not for readout error alone', () => {
+    const x: Circuit = { qubits: 1, columns: [[{ gate: 'X', targets: [0] }]] };
+    expect(usesDensity(x)).toBe(false);
+    expect(usesDensity({ ...x, noise: { oneQubit: 0, twoQubit: 0, readout: 0.1 } })).toBe(false);
+    expect(usesDensity({ ...x, noise: { oneQubit: 0.01, twoQubit: 0, readout: 0 } })).toBe(true);
   });
 });

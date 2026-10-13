@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { movePart, placeGate, removeOperation, removeQubit, setCondition, type EditResult } from './edits';
+import { movePart, placeGate, removeOperation, removeQubit, setCondition, setNoise, type EditResult } from './edits';
 import type { Circuit } from './model';
 
 function ok(result: EditResult) {
@@ -69,5 +69,13 @@ describe('circuit edits', () => {
     expect(ok(removeOperation(circuit, { column: 0, index: 0 })).circuit).toEqual({ qubits: 3, columns: [[{ gate: 'X', targets: [2] }]] });
     const moved = ok(movePart(circuit, { column: 0, index: 0, qubit: 1 }, { column: 0, qubit: 0 })).circuit;
     expect(moved.columns[1][0]).toEqual({ gate: 'X', targets: [2] });
+  });
+  it('keeps the noise through edits, snaps rates to 0.1% and drops all-zero noise', () => {
+    const noise = { oneQubit: 0.01, twoQubit: 0.02, readout: 0.03 };
+    const { circuit } = ok(placeGate({ ...empty, noise }, 'H', { column: 0, qubit: 0 }));
+    expect(circuit.noise).toEqual(noise);
+    expect(ok(removeOperation(circuit, { column: 0, index: 0 })).circuit.noise).toEqual(noise);
+    expect(ok(setNoise(empty, { oneQubit: 0.01234, twoQubit: 0, readout: 0 })).circuit.noise).toEqual({ oneQubit: 0.012, twoQubit: 0, readout: 0 });
+    expect(ok(setNoise({ ...empty, noise }, { oneQubit: 0, twoQubit: 0, readout: 0 })).circuit).toEqual(empty);
   });
 });

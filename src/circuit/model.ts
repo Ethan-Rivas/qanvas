@@ -26,9 +26,22 @@ export interface Operation {
 }
 
 /** Each column holds operations that run at the same time, on distinct qubits. */
+/** Error rates for the whole circuit, each a probability. */
+export interface Noise {
+  /** After each one-qubit gate, the chance its qubit is left in a random state (Qiskit's depolarizing_error). */
+  oneQubit: number;
+  /** The same after each gate on two or more qubits: CNOT, CZ, SWAP and Toffoli. */
+  twoQubit: number;
+  /** The chance that a measurement reports the wrong bit. */
+  readout: number;
+}
+
+export const NOISE_LIMITS: Noise = { oneQubit: 0.1, twoQubit: 0.1, readout: 0.2 };
+
 export interface Circuit {
   qubits: number;
   columns: Operation[][];
+  noise?: Noise;
 }
 
 interface GateRule {
@@ -61,6 +74,7 @@ export const GATE_RULES: Record<GateName, GateRule> = {
 
 export type CircuitErrorCode =
   | 'qubit-count'
+  | 'noise'
   | 'unknown-gate'
   | 'target-count'
   | 'control-count'
@@ -93,12 +107,21 @@ export function readableQubits(circuit: Circuit, column: number): number[] {
   return [...readable].sort((a, b) => a - b);
 }
 
+function validNoise(noise: unknown): boolean {
+  if (typeof noise !== 'object' || noise === null) return false;
+  return (Object.keys(NOISE_LIMITS) as (keyof Noise)[]).every((key) => {
+    const rate = (noise as Record<string, unknown>)[key];
+    return typeof rate === 'number' && rate >= 0 && rate <= NOISE_LIMITS[key];
+  });
+}
+
 export function validateCircuit(circuit: Circuit): CircuitError[] {
   const errors: CircuitError[] = [];
   const { qubits } = circuit;
   if (!Number.isInteger(qubits) || qubits < 1 || qubits > MAX_QUBITS) {
     return [{ code: 'qubit-count' }];
   }
+  if (circuit.noise !== undefined && !validNoise(circuit.noise)) errors.push({ code: 'noise' });
 
   const readable = new Set<number>();
 
@@ -169,6 +192,36 @@ export function partwayMeasurements(circuit: Circuit): Set<string> {
 /** A dynamic circuit resets a qubit or measures one partway through, so it needs the density-matrix simulator. */
 export function isDynamic(circuit: Circuit): boolean {
   return circuit.columns.some((column) => column.some((op) => op.gate === 'RESET')) || partwayMeasurements(circuit).size > 0;
+}
+
+export function hasNoise(circuit: Circuit): boolean {
+  return circuit.noise !== undefined && (circuit.noise.oneQubit > 0 || circuit.noise.twoQubit > 0 || circuit.noise.readout > 0);
+}
+
+export function hasGateNoise(circuit: Circuit): boolean {
+  return circuit.noise !== undefined && (circuit.noise.oneQubit > 0 || circuit.noise.twoQubit > 0);
+}
+
+/** Gate noise mixes the state; readout error alone only changes what measurements report, so it keeps the state vector. */
+export function usesDensity(circuit: Circuit): boolean {
+  return isDynamic(circuit) || hasGateNoise(circuit);
+}
+
+/** The most qubits the browser simulates this circuit with; above it, only quantum-lab's Qiskit Aer runs it. */
+export function browserLimit(circuit: Circuit): number {
+  return usesDensity(circuit) ? DENSITY_QUBITS : BROWSER_QUBITS;
+}
+
+export function withoutNoise(circuit: Circuit): Circuit {
+  const plain = { ...circuit };
+  delete plain.noise;
+  return plain;
+}
+
+/** The depolarizing error after `op`: measurements and resets have none. */
+export function gateError(op: Operation, noise: Noise | undefined): number {
+  if (!noise || op.gate === 'M' || op.gate === 'RESET') return 0;
+  return operationQubits(op).length === 1 ? noise.oneQubit : noise.twoQubit;
 }
 
 /** Equal circuits, whatever order their objects' keys were written in. */

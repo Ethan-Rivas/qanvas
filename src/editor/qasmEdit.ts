@@ -12,5 +12,7 @@ export function readQasmEdit(text: string, current: Circuit, t: Translate): { ok
   const result = importQasm(text);
   if (!result.ok) return result;
   const shown = importQasm(codeText(generateCode('qasm', current, t)));
-  return { ok: true, circuit: shown.ok && sameCircuit(shown.circuit, result.circuit) ? null : result.circuit };
+  if (shown.ok && sameCircuit(shown.circuit, result.circuit)) return { ok: true, circuit: null };
+  // OpenQASM can't hold noise, so the edited circuit keeps the noise it had.
+  return { ok: true, circuit: current.noise ? { ...result.circuit, noise: current.noise } : result.circuit };
 }

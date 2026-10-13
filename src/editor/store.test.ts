@@ -22,3 +22,14 @@ it('keeps the circuit and history unchanged when an edit is rejected', () => {
   setCondition({ column: 0, index: 0 }, { qubit: 1, value: 1 });
   expect(useEditor.getState()).toMatchObject({ notice: 'condition', past: before });
 });
+
+it('makes a run of noise changes one undo step', () => {
+  const { placeGate, setNoise, undo } = useEditor.getState();
+  placeGate('H', { column: 0, qubit: 0 });
+  setNoise({ oneQubit: 0.001, twoQubit: 0, readout: 0 });
+  setNoise({ oneQubit: 0.002, twoQubit: 0, readout: 0 });
+  setNoise({ oneQubit: 0.003, twoQubit: 0, readout: 0 });
+  expect(useEditor.getState().circuit.noise?.oneQubit).toBe(0.003);
+  undo();
+  expect(useEditor.getState().circuit).toEqual({ qubits: 3, columns: [[{ gate: 'H', targets: [0] }]] });
+});

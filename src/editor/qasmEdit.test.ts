@@ -21,4 +21,9 @@ describe('OpenQASM editing', () => {
     expect(edited.ok && edited.circuit?.columns[0]).toEqual([{ gate: 'X', targets: [0] }]);
     expect(readQasmEdit(text.replace('h q[0];', 'h q[0]'), bell, t).ok).toBe(false);
   });
+  it("keeps the circuit's noise, which OpenQASM can't hold", () => {
+    const noise = { oneQubit: 0.01, twoQubit: 0, readout: 0.05 };
+    const result = readQasmEdit('OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[1];\nh q[0];\n', { qubits: 1, columns: [], noise }, t);
+    expect(result).toEqual({ ok: true, circuit: { qubits: 1, columns: [[{ gate: 'H', targets: [0] }]], noise } });
+  });
 });

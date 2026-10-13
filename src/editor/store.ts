@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as edits from '../circuit/edits';
 import type { Cell, EditError, EditResult, OpLocation } from '../circuit/edits';
 import type { GateKind } from '../circuit/gates';
-import { validateCircuit, type Circuit, type Condition, type Operation } from '../circuit/model';
+import { validateCircuit, type Circuit, type Condition, type Noise, type Operation } from '../circuit/model';
 import type { ExampleId } from '../examples/examples';
 import { qubitLimit, useLab } from '../lab/lab';
 import type { Language } from '../i18n/i18n';
@@ -39,6 +39,10 @@ export interface EditorState {
   removeOperation(at: OpLocation): void;
   setAngle(at: OpLocation, angle: number): void;
   setCondition(at: OpLocation, condition: Condition | null): void;
+  /** A run of noise changes with no other edit in between, like a slider being dragged, is one undo step. */
+  setNoise(noise: Noise | null): void;
+  /** The circuit the last noise change produced, so the next one can join its undo step. */
+  noiseEdit: Circuit | null;
   addQubit(): void;
   removeQubit(qubit: number): void;
   copySelection(): void;
@@ -113,6 +117,7 @@ export const useEditor = create<EditorState>()((set, get) => {
     language: initialLanguage(),
     learnMode: load(LEARN_KEY) !== 'off',
     step: null,
+    noiseEdit: null,
 
     placeGate: (kind, cell) => apply(edits.placeGate(get().circuit, kind, cell)),
 
@@ -134,6 +139,17 @@ export const useEditor = create<EditorState>()((set, get) => {
     removeOperation: (at) => apply(edits.removeOperation(get().circuit, at)),
     setAngle: (at, angle) => apply(edits.setAngle(get().circuit, at, angle)),
     setCondition: (at, condition) => apply(edits.setCondition(get().circuit, at, condition)),
+    setNoise(noise) {
+      const { circuit, noiseEdit } = get();
+      const result = edits.setNoise(circuit, noise);
+      if (result.ok && circuit === noiseEdit && result.circuit !== circuit) {
+        set({ circuit: result.circuit, future: [], noiseEdit: result.circuit });
+        return;
+      }
+      apply(result, true);
+      // Only a change this call made can start a run; after a rejected or empty change, the next one records its own step.
+      if (get().circuit !== circuit) set({ noiseEdit: get().circuit });
+    },
     addQubit: () => apply(edits.addQubit(get().circuit, qubitLimit(useLab.getState().lab)), true),
     removeQubit: (qubit) => apply(edits.removeQubit(get().circuit, qubit)),
 

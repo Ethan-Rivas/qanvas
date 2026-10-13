@@ -25,4 +25,9 @@ describe('sharing', () => {
       '#c=ndCxCsIwFAXQf7nzQxrd8gVdXJzUkCGWEAJpUtNXKJT8uwRBbYcOzu9w7-Ut6HzuJs-QC57Tw_MIeSJ0KUx9HCGVWuAMW0hcbiCwyc5WpBpNMNEFCykOotDHtSsmdNH0DbmihkfOKbyvv_a4axu9k9tutv1det8r3djzupQEVaALwc6mH-prwDbYIWU27FNEeQE';
     expect(await decodeLink(link)).toEqual({ circuit: EXAMPLES.teleportation, exampleId: 'teleportation' });
   });
+  it('keeps noise in links and files, and rejects noise outside the limits', async () => {
+    const noisy = { ...EXAMPLES.bell, noise: { oneQubit: 0.005, twoQubit: 0.01, readout: 0.02 } };
+    expect(await decodeLink(await encodeLink({ circuit: noisy, exampleId: null }))).toEqual({ circuit: noisy, exampleId: null });
+    expect(fromFile(toFile({ circuit: { ...noisy, noise: { ...noisy.noise, readout: 0.5 } }, exampleId: null }))).toBeNull();
+  });
 });

@@ -2,12 +2,15 @@ import { createOperation, qubitsNeeded, type GateKind } from './gates';
 import {
   MAX_QUBITS,
   operationQubits,
+  sameCircuit,
   readableQubits,
   referencedQubits,
   validateCircuit,
+  withoutNoise,
   type Circuit,
   type CircuitErrorCode,
   type Condition,
+  type Noise,
   type Operation,
 } from './model';
 
@@ -51,12 +54,12 @@ function insert(columns: Operation[][], op: Operation, column: number): OpLocati
   return { column, index: 0 };
 }
 
-function finish(qubits: number, columns: Operation[][], at?: OpLocation): EditResult {
+function finish(circuit: Circuit, columns: Operation[][], at?: OpLocation, qubits = circuit.qubits): EditResult {
   const removedBefore = at ? columns.slice(0, at.column).filter((c) => c.length === 0).length : 0;
-  const circuit = { qubits, columns: columns.filter((c) => c.length > 0) };
-  const error = validateCircuit(circuit)[0];
+  const next = { ...circuit, qubits, columns: columns.filter((c) => c.length > 0) };
+  const error = validateCircuit(next)[0];
   if (error) return { ok: false, error: error.code };
-  return { ok: true, circuit, at: at && { column: at.column - removedBefore, index: at.index } };
+  return { ok: true, circuit: next, at: at && { column: at.column - removedBefore, index: at.index } };
 }
 
 function clearOrphanConditions(qubits: number, columns: Operation[][]): void {
@@ -80,13 +83,13 @@ export function placeGate(circuit: Circuit, kind: GateKind, cell: Cell): EditRes
   if (circuit.qubits < qubitsNeeded(kind)) return { ok: false, error: 'too-few-qubits' };
   const columns = copyColumns(circuit);
   const at = insert(columns, createOperation(kind, cell.qubit, circuit.qubits), cell.column);
-  return finish(circuit.qubits, columns, at);
+  return finish(circuit, columns, at);
 }
 
 export function pasteOperation(circuit: Circuit, op: Operation, column: number): EditResult {
   if (operationQubits(op).some((q) => q >= circuit.qubits)) return { ok: false, error: 'too-few-qubits' };
   const columns = copyColumns(circuit);
-  return finish(circuit.qubits, columns, insert(columns, op, column));
+  return finish(circuit, columns, insert(columns, op, column));
 }
 
 /**
@@ -111,20 +114,20 @@ export function movePart(circuit: Circuit, from: OpLocation & { qubit: number },
   columns[from.column].splice(from.index, 1);
   const at = insert(columns, moved, to.column);
   clearOrphanConditions(circuit.qubits, columns);
-  return finish(circuit.qubits, columns, at);
+  return finish(circuit, columns, at);
 }
 
 export function removeOperation(circuit: Circuit, at: OpLocation): EditResult {
   const columns = copyColumns(circuit);
   columns[at.column].splice(at.index, 1);
   clearOrphanConditions(circuit.qubits, columns);
-  return finish(circuit.qubits, columns);
+  return finish(circuit, columns);
 }
 
 export function setAngle(circuit: Circuit, at: OpLocation, angle: number): EditResult {
   const columns = copyColumns(circuit);
   columns[at.column][at.index] = { ...columns[at.column][at.index], angle };
-  return finish(circuit.qubits, columns, at);
+  return finish(circuit, columns, at);
 }
 
 export function setCondition(circuit: Circuit, at: OpLocation, condition: Condition | null): EditResult {
@@ -133,7 +136,7 @@ export function setCondition(circuit: Circuit, at: OpLocation, condition: Condit
   delete op.condition;
   if (condition) op.condition = condition;
   columns[at.column][at.index] = op;
-  return finish(circuit.qubits, columns, at);
+  return finish(circuit, columns, at);
 }
 
 export function addQubit(circuit: Circuit, limit = MAX_QUBITS): EditResult {
@@ -153,5 +156,18 @@ export function removeQubit(circuit: Circuit, qubit: number): EditResult {
         return op.condition ? { ...moved, condition: { ...op.condition, qubit: shift(op.condition.qubit) } } : moved;
       }),
   );
-  return finish(circuit.qubits - 1, columns);
+  return finish(circuit, columns, undefined, circuit.qubits - 1);
+}
+
+/** Rates snap to the sliders' 0.1% steps, and noise with every rate at zero is no noise. */
+export function setNoise(circuit: Circuit, noise: Noise | null): EditResult {
+  const snap = (rate: number) => Math.round(rate * 1000) / 1000;
+  const next = withoutNoise(circuit);
+  if (noise) {
+    const snapped = { oneQubit: snap(noise.oneQubit), twoQubit: snap(noise.twoQubit), readout: snap(noise.readout) };
+    if (snapped.oneQubit > 0 || snapped.twoQubit > 0 || snapped.readout > 0) next.noise = snapped;
+  }
+  const error = validateCircuit(next)[0];
+  if (error) return { ok: false, error: error.code };
+  return { ok: true, circuit: sameCircuit(next, circuit) ? circuit : next };
 }
