@@ -194,6 +194,8 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 3. **Run with Qiskit Aer, and edit Qiskit, Cirq and pyQuil code in the lab.**
    - **Check:** a circuit above 12 qubits runs on Aer with the bit order right; in each language, a snippet with a loop shows the right circuit with the same final state, and the code stays as typed.
 
+**Status:** 0.2 is done and released as v0.2.1 on Oct 12, 2026, together with quantum-lab v0.3.0, which runs the lab bridge. The v0.2.0 tag published only the website: its server image couldn't be built for arm64, so 0.2.1 is the release. Still open: the reviews and checks listed under 0.1, and a test of the bridge in Codespaces.
+
 **Open questions for 0.2:**
 
 - [x] The qubit limit with Aer is 24 for now (decided Oct 12, 2026). Rows get more compact above 12 qubits so the circuit stays readable.
