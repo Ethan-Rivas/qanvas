@@ -213,22 +213,23 @@ function parse(source: string): Circuit {
       }
     } else if (params !== undefined) {
       throw new QasmError({ code: 'syntax', line });
-  }
+    }
 
-  const args = rest.split(',').map((a) => a.trim());
-  const arity = spec.gate === 'SWAP' ? 2 : spec.controls + 1;
-  if (args.length !== arity || args.some((a) => !a)) throw new QasmError({ code: 'syntax', line });
+    const args = rest.split(',').map((a) => a.trim());
+    const arity = spec.gate === 'SWAP' ? 2 : spec.controls + 1;
+    if (args.length !== arity || args.some((a) => !a)) throw new QasmError({ code: 'syntax', line });
 
-  for (const qs of broadcast(args, line)) {
-    const op: Operation =
-      spec.gate === 'SWAP'
-        ? { gate: 'SWAP', targets: qs }
-        : { gate: spec.gate, targets: [qs[qs.length - 1]], ...(spec.controls > 0 && { controls: qs.slice(0, -1) }) };
-    if (angle !== undefined) op.angle = angle;
-    if (condition) op.condition = condition;
-    if (new Set(qs).size !== qs.length) throw new QasmError({ code: 'syntax', line });
-    place(op);
-  }
+    for (const qs of broadcast(args, line)) {
+      const op: Operation =
+        spec.gate === 'SWAP'
+          ? { gate: 'SWAP', targets: qs }
+          : { gate: spec.gate, targets: [qs[qs.length - 1]], ...(spec.controls > 0 && { controls: qs.slice(0, -1) }) };
+      if (angle !== undefined) op.angle = angle;
+      if (condition) op.condition = condition;
+      if (condition && qs.includes(condition.qubit)) throw new QasmError({ code: 'classical-control', line });
+      if (new Set(qs).size !== qs.length) throw new QasmError({ code: 'syntax', line });
+      place(op);
+    }
   }
 
   const all = statements(source);

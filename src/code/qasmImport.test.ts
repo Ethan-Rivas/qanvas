@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { sameCircuit, type Circuit } from '../circuit/model';
 import { translator } from '../i18n/i18n';
+import { densityOf } from '../sim/analysis';
 import { finalState } from '../sim/simulator';
 import { codeText, generateCode } from './generate';
 import { importQasm } from './qasmImport';
@@ -22,6 +23,25 @@ describe('OpenQASM import', () => {
       return a.re.some((re, i) => Math.hypot(re - b.re[i], a.im[i] - b.im[i]) > 1e-9);
     });
     expect(failures.map((c) => c.name)).toEqual([]);
+  });
+
+  it('reads back circuits that measure partway through with the same density matrix', () => {
+    const cases = JSON.parse(readFileSync(join(__dirname, '../../reference/data/mid-circuit.json'), 'utf8')) as { name: string; circuit: Circuit }[];
+    const failures = cases.filter(({ circuit }) => {
+      const result = importQasm(codeText(generateCode('qasm', circuit, t)));
+      if (!result.ok) return true;
+      const a = densityOf(finalState(circuit));
+      const b = densityOf(finalState(result.circuit));
+      return a.re.some((re, i) => Math.hypot(re - b.re[i], a.im[i] - b.im[i]) > 1e-9);
+    });
+    expect(failures.map((c) => c.name)).toEqual([]);
+  });
+
+  it('says a gate cannot be conditioned on its own measured qubit', () => {
+    expect(importQasm('OPENQASM 2.0;\nqreg q[1];\ncreg c0[1];\nmeasure q[0] -> c0[0];\nif(c0==1) x q[0];')).toMatchObject({
+      ok: false,
+      error: { code: 'classical-control', line: 5 },
+    });
   });
 
   it('reads code written elsewhere: comments, registers, broadcasts and expressions', () => {
