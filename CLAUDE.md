@@ -17,7 +17,7 @@ Qanvas is a browser-based visual quantum circuit builder for students first and 
 ## Correctness (non-negotiable)
 
 - The simulator must match Qiskit within 1e-9 on every reference circuit. Never change the simulator without running these tests, and never loosen the tolerance or edit a reference file to make a test pass.
-- Reference states come from Qiskit's `Statevector` via the script in the repo. Regenerate them with that script; never write them by hand.
+- Reference states come from Qiskit's `Statevector`, or `DensityMatrix` for circuits with noise or measurements partway through, via the script in the repo. Regenerate them with that script; never write them by hand.
 - **Bit order:** Qanvas displays q0 first (leftmost), like Cirq and Quirk. Qiskit prints bitstrings with q0 last (rightmost). Every place that talks to Qiskit (exporter, reference script, tests) must convert explicitly, with a comment saying so.
 - Exported Qiskit, Cirq and pyQuil code must actually be run in tests, not just compared as text.
 
