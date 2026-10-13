@@ -82,7 +82,7 @@ npm run icons        # renders public/icons from the design tokens
 ## Roadmap
 
 - [x] **0.2:** edit the OpenQASM code directly; import Quirk links; download the circuit as a notebook, a Python script or OpenQASM; "Open in notebook" to send it to JupyterLab; run bigger circuits with Qiskit Aer and edit Qiskit, Cirq and pyQuil code in quantum-lab.
-- [ ] **0.3:** noise models (depolarizing, readout error) with an ideal vs noisy view; mid-circuit measurement.
+- [ ] **0.3:** noise models (depolarizing, readout error) with an ideal vs noisy view; measure anywhere in the circuit, reset, and gates that run only if a qubit measured 0 or 1.
 - [ ] **0.4:** gates with any number of controls (including controls on 0), √X and √Y, QFT blocks, custom gates from a circuit or a matrix; lessons that chain several examples.
 - [ ] **0.5:** import real Qiskit notebooks and pick one of their circuits, including long ones with hundreds of steps.
 - [ ] **Later:** run on real IBM hardware through quantum-lab; collaboration.

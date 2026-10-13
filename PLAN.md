@@ -202,13 +202,66 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
 - [x] Editing Qiskit, Cirq and pyQuil code works only in quantum-lab, where real Python runs it, so any code that runs in a notebook works, loops included. The website keeps those tabs read-only and points to the lab; it doesn't get a partial Python reader. (Decided Oct 12, 2026.)
 - [ ] What the 0.1 reviews and feedback from students change about this list.
 
+## Version 0.3 plan
+
+0.3 makes measurement and noise part of the circuit. A measurement can happen anywhere and later gates can depend on its result, and noise shows how real hardware spoils a clean result. Everything stays exact: Qanvas computes the mixture of every possible outcome instead of sampling runs, so it still matches Qiskit within 1e-9.
+
+**In:**
+
+- **Noise panel:** three sliders for the whole circuit: depolarizing error per one-qubit gate, depolarizing error per two-qubit gate, and readout error (the chance a measurement reports the wrong bit). Noise is off by default and is saved with the circuit, in share links and files too.
+- **Ideal vs noisy:** with noise on, the histogram shows both results side by side. Step-through and the Bloch spheres show the noisy state, so the arrows shrink as it loses coherence, and Learn mode says why.
+- **Measure anywhere:** M can go in any column, and a measured qubit can be used again afterwards.
+- **Reset:** a new gate that puts a qubit back to |0⟩.
+- **One-bit conditions:** a one-qubit gate can run only "if qN measured 1" (or 0), where qN was measured in an earlier column. The diagram draws a double line from the measurement to the gate.
+- **Examples:** teleportation rebuilt with real measurements and corrections, a 3-qubit bit-flip error-correction demo, and "noise ruins a Bell state".
+- **Export:** Qiskit and Cirq export everything, noise included. pyQuil exports measurements and conditions but not the noise. OpenQASM 2.0 exports measurements, reset and `if` (one classical register per qubit) but not the noise. When noise is left out, a comment at the top says so.
+- **In quantum-lab:** noisy or mid-measurement circuits above 8 qubits run on Qiskit Aer with the same noise and give sampled counts.
+
+**Out of 0.3:** noise placed as gates on a wire; hardware-like noise (relaxation, T1 and T2, error rates per gate); conditions on several bits; a view that follows one measurement outcome; and user-editable qubit limits (see Later).
+
+**Technical design:**
+
+- **Circuit model:** an operation gains an optional `condition: {qubit, value}`, there's a new `RESET` gate, and the circuit gains an optional `noise: {oneQubit, twoQubit, readout}`. Validation drops the "measure only at the end" rule. A condition must point at a qubit measured in an earlier column and not touched since. All new fields are optional, so old links and files still open.
+- **Two engines:** a circuit with no noise, no reset and no measurement before the end keeps today's state-vector simulator (exact, up to 12 qubits). Anything else uses a new density-matrix simulator, which tracks the mixture of every outcome as a matrix:
+  - a gate is ρ → UρU†;
+  - depolarizing noise is a channel applied after each gate;
+  - a measurement removes the coherence between the qubit's 0 and 1 (Z-basis dephasing) and records the outcome probabilities;
+  - a conditional gate applies only to the matching outcome, and readout error mixes in the other outcome with probability p.
+- **Size:** a density matrix grows as 4ⁿ, so the density-matrix simulator is limited to 8 qubits in the browser (1 MB per snapshot; 12 qubits would be 256 MB). Above that, the lab runs the circuit on Aer.
+- **Same results shape:** probabilities, Bloch vectors (from the same partial trace) and per-column snapshots keep their current form, so the interface reads both engines the same way. The noisy histogram applies readout error to the final probabilities. Both run in the Web Worker. The performance check adds an 8-qubit noisy circuit that must also update in under 100 ms.
+- **Readout error and conditions:** the readout slider applies to every measurement, mid-circuit ones included, so a condition can fire on a wrong reading. This matches Qiskit Aer's `ReadoutError`. Flag for the physics review.
+- **Exact references:** the reference script adds circuits computed with Qiskit's `DensityMatrix`:
+  - noise as `depolarizing_error` channels;
+  - a mid-circuit measurement plus a condition as the equivalent controlled gate on a dephased qubit (the deferred-measurement principle);
+  - readout error as a classical mix of outcomes.
+  These are exact, so the 1e-9 tolerance stays.
+- **Export tests:** exported Qiskit and Cirq code runs with noise in the quantum-lab image. Noisy runs can only be sampled, so their counts must agree with Qanvas's exact probabilities within a statistical bound (fixed seed, enough shots). pyQuil and OpenQASM are checked on the ideal circuit, as today.
+- **Bit order:** nothing changes inside Qanvas. The Qiskit exporter and the reference script convert as they do today, with a comment wherever a classical register is involved.
+- **Lab bridge:** `POST /run` takes the noise settings along with the OpenQASM and builds the same `NoiseModel` the Qiskit exporter writes.
+
+**Milestones:**
+
+1. **Measure anywhere:** the model changes, the density-matrix simulator without noise, reset, one-bit conditions with their double line on the diagram, and export to all four formats.
+   - **Check:** real teleportation matches Qiskit within 1e-9 for every input angle tested, the exported code runs in the quantum-lab image and agrees with Qanvas, and old share links still open.
+2. **Noise:** the noise panel, the depolarizing and readout channels, ideal vs noisy histograms, shrinking Bloch arrows in step-through, noise in share links, Qiskit and Cirq noise export, and noise in the lab's `/run`.
+   - **Check:** density-matrix references match within 1e-9, exported Qiskit and Cirq noisy counts agree within the statistical bound, and an 8-qubit noisy circuit updates in under 100 ms.
+3. **Learn and ship:** explanations in EN and ES (measuring mid-circuit, mixed states, noise), the three new examples, accessibility, and the release.
+   - **Check:** the release checklist passes; tag v0.3.0.
+
+**Open questions for 0.3:**
+
+- [ ] Allow density-matrix references alongside `Statevector` ones. The project rules name only `Statevector`, so this needs approval before milestone 1.
+- [ ] Who reviews the physics of mixed states, noise and "the measurement happened but we haven't looked yet", in both languages.
+- [ ] Slider ranges and defaults, for example 0 to 10% for gate errors and 0 to 20% for readout, in steps of 0.1%.
+- [ ] Whether Learn mode shows each measurement's outcome probabilities at that step.
+
 ## After 0.1, and open questions
 
 **Later versions, roughly in order:**
 
 - **0.1.x:** fixes from the physics and Spanish reviews and from student feedback, as small patch releases.
 - **0.2:** see the 0.2 plan above.
-- **0.3:** noise models (depolarizing, readout error) with a side-by-side ideal vs noisy view; mid-circuit measurement and classical control.
+- **0.3:** see the 0.3 plan above.
 - **0.4:** a gate toolkit and lessons. Qanvas isn't meant to be a Quirk clone: it takes the gates that help someone learn or export working code, and leaves out Quirk's sandbox tools (arithmetic and input registers, time-animated gates, gradients, parity and sampling probes, postselection), which are hard to explain step by step and don't turn into clean framework code.
   - Any gate with controls, more than two controls, and controls that fire on 0.
   - √X, √Y and powers such as X^t.
@@ -217,7 +270,7 @@ Version 0.1 is built in four milestones; each ends with a check that must pass b
   - Lesson paths that chain several examples.
   - **Check:** a 5-qubit Grover search with an oracle subcircuit and many-control gates, as Quirk's gallery shows it, is built in Qanvas, exported, and matches Qiskit. Each new gate also lets more Quirk links import.
 - **0.5:** import real notebooks. In quantum-lab, a Qiskit notebook runs in a separate process with a time limit and a warning first (it runs the notebook's own code), and you pick one of the circuits it builds. Qiskit rewrites gates Qanvas lacks into ones it has; more than 24 qubits or unbound parameters get a clear message. Circuits with hundreds of steps get a compact view, a slider that still works and a performance check at that size. It comes after 0.3 and 0.4 because real notebooks often use mid-circuit measurement, and long rewritten circuits need subcircuits to stay readable.
-- **Later:** run on real IBM hardware through quantum-lab; a native desktop app if the installable web app isn't enough; collaboration.
+- **Later:** run on real IBM hardware through quantum-lab; a native desktop app if the installable web app isn't enough; collaboration; qubit limits each user can change in settings (12 for the browser's state vector, 8 for its density matrix, 24 for Aer), with a warning that higher limits can be slow or run out of memory.
 
 **Open questions:**
 
