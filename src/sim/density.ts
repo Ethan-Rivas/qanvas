@@ -1,4 +1,4 @@
-import { partwayMeasurements, type Circuit, type Operation } from '../circuit/model';
+import { DENSITY_QUBITS, partwayMeasurements, type Circuit, type Operation } from '../circuit/model';
 import { applySingle, applySwap, conjugate, gateMatrix, mask, type Amplitudes, type Matrix2 } from './kernels';
 
 /** ρ in Qanvas's index order (q0 is the most significant bit), row-major: entry (i, j) is at i·2ⁿ + j. */
@@ -7,13 +7,6 @@ export interface DensityMatrix {
   re: Float64Array;
   im: Float64Array;
   mixed: true;
-}
-
-function zeroDensity(qubits: number): DensityMatrix {
-  const size = 1 << (2 * qubits);
-  const re = new Float64Array(size);
-  re[0] = 1;
-  return { qubits, re, im: new Float64Array(size), mixed: true };
 }
 
 /**
@@ -85,15 +78,19 @@ function applyOperation(rho: DensityMatrix, op: Operation, measuresPartway: (q: 
   if (value === 0) applyUnitary(rho, X, qubit, []);
 }
 
-/** The density matrix before any column, then after each column: `columns.length + 1` matrices. */
-export function simulateDensity(circuit: Circuit): DensityMatrix[] {
+/**
+ * Writes the density matrix before any column, then after each one, into `re` and `im` (step k at k·4ⁿ),
+ * so a long circuit keeps a single copy of each snapshot.
+ */
+export function simulateDensity(circuit: Circuit, re: Float64Array, im: Float64Array): void {
+  if (circuit.qubits > DENSITY_QUBITS) throw new Error(`The density-matrix simulator works with up to ${DENSITY_QUBITS} qubits`);
+  const size = 1 << (2 * circuit.qubits);
   const partway = partwayMeasurements(circuit);
-  const states = [zeroDensity(circuit.qubits)];
+  re[0] = 1;
   circuit.columns.forEach((column, c) => {
-    const previous = states[states.length - 1];
-    const rho: DensityMatrix = { ...previous, re: previous.re.slice(), im: previous.im.slice() };
+    re.copyWithin((c + 1) * size, c * size, (c + 1) * size);
+    im.copyWithin((c + 1) * size, c * size, (c + 1) * size);
+    const rho: DensityMatrix = { qubits: circuit.qubits, re: re.subarray((c + 1) * size, (c + 2) * size), im: im.subarray((c + 1) * size, (c + 2) * size), mixed: true };
     for (const op of column) applyOperation(rho, op, (q) => partway.has(`${c}:${q}`));
-    states.push(rho);
   });
-  return states;
 }

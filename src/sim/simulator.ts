@@ -1,4 +1,4 @@
-import { isDynamic, validateCircuit, type Circuit, type Operation } from '../circuit/model';
+import { usesDensity, validateCircuit, type Circuit, type Operation } from '../circuit/model';
 import { simulateDensity, type DensityMatrix } from './density';
 import { applySingle, applySwap, gateMatrix } from './kernels';
 
@@ -12,16 +12,6 @@ export interface StateVector {
   qubits: number;
   re: Float64Array;
   im: Float64Array;
-}
-
-export function zeroState(qubits: number): StateVector {
-  const re = new Float64Array(1 << qubits);
-  re[0] = 1;
-  return { qubits, re, im: new Float64Array(1 << qubits) };
-}
-
-function cloneState(state: StateVector): StateVector {
-  return { qubits: state.qubits, re: state.re.slice(), im: state.im.slice() };
 }
 
 export type QuantumState = StateVector | DensityMatrix;
@@ -43,21 +33,56 @@ function applyOperation(state: StateVector, op: Operation) {
   }
 }
 
-/** Returns the state before any column, then after each column: `columns.length + 1` states. */
-export function simulate(circuit: Circuit): QuantumState[] {
+/** Every step's state, one after another: the state before any column, then after each one. */
+export interface Simulation {
+  qubits: number;
+  mixed: boolean;
+  re: Float64Array;
+  im: Float64Array;
+}
+
+function stateSize(qubits: number, mixed: boolean): number {
+  return mixed ? 1 << (2 * qubits) : 1 << qubits;
+}
+
+/** A view of one step's state inside the simulation's buffers; steps past the end give the last one. */
+export function stateAt(simulation: Simulation, step: number): QuantumState {
+  const { qubits, mixed } = simulation;
+  const size = stateSize(qubits, mixed);
+  const k = Math.min(step, simulation.re.length / size - 1);
+  const re = simulation.re.subarray(k * size, (k + 1) * size);
+  const im = simulation.im.subarray(k * size, (k + 1) * size);
+  return mixed ? { qubits, re, im, mixed: true } : { qubits, re, im };
+}
+
+export function simulateSteps(circuit: Circuit): Simulation {
   const errors = validateCircuit(circuit);
   if (errors.length > 0) {
     throw new Error(`Invalid circuit: ${errors.map((e) => e.code).join(', ')}`);
   }
-  if (isDynamic(circuit)) return simulateDensity(circuit);
-
-  const states = [zeroState(circuit.qubits)];
-  for (const column of circuit.columns) {
-    const state = cloneState(states[states.length - 1]);
-    for (const op of column) applyOperation(state, op);
-    states.push(state);
+  const { qubits } = circuit;
+  const mixed = usesDensity(circuit);
+  const size = stateSize(qubits, mixed);
+  const re = new Float64Array((circuit.columns.length + 1) * size);
+  const im = new Float64Array(re.length);
+  if (mixed) {
+    simulateDensity(circuit, re, im);
+  } else {
+    re[0] = 1;
+    circuit.columns.forEach((column, c) => {
+      re.copyWithin((c + 1) * size, c * size, (c + 1) * size);
+      im.copyWithin((c + 1) * size, c * size, (c + 1) * size);
+      const state = stateAt({ qubits, mixed, re, im }, c + 1) as StateVector;
+      for (const op of column) applyOperation(state, op);
+    });
   }
-  return states;
+  return { qubits, mixed, re, im };
+}
+
+/** Returns the state before any column, then after each column: `columns.length + 1` states. */
+export function simulate(circuit: Circuit): QuantumState[] {
+  const simulation = simulateSteps(circuit);
+  return Array.from({ length: circuit.columns.length + 1 }, (_, k) => stateAt(simulation, k));
 }
 
 export function finalState(circuit: Circuit): QuantumState {

@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { probabilities, simulate } from './simulator';
+import { probabilities, simulate, simulateSteps } from './simulator';
 
 it('keeps one state per step, with q0 as the leftmost bit of the index', () => {
   const states = simulate({
@@ -21,4 +21,8 @@ it('keeps one state per step, with q0 as the leftmost bit of the index', () => {
 
 it('refuses invalid circuits', () => {
   expect(() => simulate({ qubits: 1, columns: [[{ gate: 'H', targets: [1] }]] })).toThrow('qubit-range');
+});
+
+it('refuses density matrices above 8 qubits instead of running out of memory', () => {
+  expect(() => simulateSteps({ qubits: 9, columns: [[{ gate: 'RESET', targets: [0] }]] })).toThrow(/up to 8 qubits/);
 });
