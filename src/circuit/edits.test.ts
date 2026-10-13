@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { movePart, placeGate, removeQubit, setCondition, type EditResult } from './edits';
+import { movePart, placeGate, removeOperation, removeQubit, setCondition, type EditResult } from './edits';
 import type { Circuit } from './model';
 
 function ok(result: EditResult) {
@@ -59,5 +59,15 @@ describe('circuit edits', () => {
     expect(setCondition(circuit, { column: 0, index: 0 }, { qubit: 1, value: 1 })).toEqual({ ok: false, error: 'condition' });
     expect(ok(removeQubit(conditioned, 1)).circuit).toEqual({ qubits: 2, columns: [] });
     expect(ok(removeQubit(conditioned, 0)).circuit.columns[1][0]).toEqual({ gate: 'X', targets: [1], condition: { qubit: 0, value: 1 } });
+  });
+
+  it('clears conditions that lose their measurement when it is deleted or moved', () => {
+    const circuit: Circuit = {
+      qubits: 3,
+      columns: [[{ gate: 'M', targets: [1] }], [{ gate: 'X', targets: [2], condition: { qubit: 1, value: 1 } }]],
+    };
+    expect(ok(removeOperation(circuit, { column: 0, index: 0 })).circuit).toEqual({ qubits: 3, columns: [[{ gate: 'X', targets: [2] }]] });
+    const moved = ok(movePart(circuit, { column: 0, index: 0, qubit: 1 }, { column: 0, qubit: 0 })).circuit;
+    expect(moved.columns[1][0]).toEqual({ gate: 'X', targets: [2] });
   });
 });

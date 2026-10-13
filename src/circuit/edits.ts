@@ -2,6 +2,7 @@ import { createOperation, qubitsNeeded, type GateKind } from './gates';
 import {
   MAX_QUBITS,
   operationQubits,
+  readableQubits,
   referencedQubits,
   validateCircuit,
   type Circuit,
@@ -58,6 +59,19 @@ function finish(qubits: number, columns: Operation[][], at?: OpLocation): EditRe
   return { ok: true, circuit, at: at && { column: at.column - removedBefore, index: at.index } };
 }
 
+function clearOrphanConditions(qubits: number, columns: Operation[][]): void {
+  columns.forEach((column, c) => {
+    const readable = readableQubits({ qubits, columns }, c);
+    const busy = column.flatMap(operationQubits);
+    column.forEach((op, i) => {
+      if (op.condition && (!readable.includes(op.condition.qubit) || busy.includes(op.condition.qubit))) {
+        const { condition: _, ...unconditioned } = op;
+        column[i] = unconditioned;
+      }
+    });
+  });
+}
+
 function copyColumns(circuit: Circuit): Operation[][] {
   return circuit.columns.map((column) => [...column]);
 }
@@ -95,12 +109,15 @@ export function movePart(circuit: Circuit, from: OpLocation & { qubit: number },
 
   const columns = copyColumns(circuit);
   columns[from.column].splice(from.index, 1);
-  return finish(circuit.qubits, columns, insert(columns, moved, to.column));
+  const at = insert(columns, moved, to.column);
+  clearOrphanConditions(circuit.qubits, columns);
+  return finish(circuit.qubits, columns, at);
 }
 
 export function removeOperation(circuit: Circuit, at: OpLocation): EditResult {
   const columns = copyColumns(circuit);
   columns[at.column].splice(at.index, 1);
+  clearOrphanConditions(circuit.qubits, columns);
   return finish(circuit.qubits, columns);
 }
 
