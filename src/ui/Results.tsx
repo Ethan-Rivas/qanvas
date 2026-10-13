@@ -1,9 +1,9 @@
-import { BROWSER_QUBITS, DENSITY_QUBITS, isDynamic } from '../circuit/model';
+import { BROWSER_QUBITS, DENSITY_QUBITS, hasGateNoise, hasNoise, usesDensity } from '../circuit/model';
 import { currentStep, useEditor } from '../editor/store';
 import { formatPercent } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
 import { blochVector, formatComplex, pureVector } from '../sim/analysis';
-import { probabilities } from '../sim/simulator';
+import { probabilities, withReadout } from '../sim/simulator';
 import { stateAt, type SimulationResult } from '../sim/useSimulation';
 import { AerResults } from './AerResults';
 import { BlochSphere } from './Bloch';
@@ -29,37 +29,63 @@ function mostLikely(p: Float64Array, candidates: number[]): number[] {
     .sort((a, b) => a - b);
 }
 
-/** Bars for each outcome; `p` is a probability or a measured fraction. */
-export function Histogram({ items, vertical }: { items: { label: string; p: number }[]; vertical: boolean }) {
+/** Bars for each outcome; `p` is a probability or a measured fraction, and `ideal`, when given, the same outcome without noise. */
+export function Histogram({ items, vertical }: { items: { label: string; p: number; ideal?: number }[]; vertical: boolean }) {
   const t = useT();
   const language = useEditor((s) => s.language);
   const compact = items.length > 8;
+  const compared = items.some((item) => item.ideal !== undefined);
   return (
-    <ul className="histogram" data-compact={compact || undefined} data-vertical={vertical || undefined}>
-      {items.map(({ label, p }) => {
-        const percent = formatPercent(language, p);
-        const likely = p > 0.005;
-        return (
-          <li key={label} className="histogram-item">
-            <span className="visually-hidden">{t('results.outcome', { ket: `|${label}⟩`, percent })}</span>
-            <span className="histogram-plot" aria-hidden="true">
-              {!compact && likely && <span className="histogram-value">{percent}</span>}
-              <span className="histogram-bar" style={{ height: `${p * 100}%` }} title={`|${label}⟩ ${percent}`} />
-            </span>
-            <span className="histogram-label" data-likely={likely || undefined} aria-hidden="true">
-              {label}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
+    <>
+      <ul className="histogram" data-compact={compact || undefined} data-vertical={vertical || undefined}>
+        {items.map(({ label, p, ideal }) => {
+          const ket = `|${label}⟩`;
+          const percent = formatPercent(language, p);
+          const likely = p > 0.005 || (ideal ?? 0) > 0.005;
+          return (
+            <li key={label} className="histogram-item">
+              <span className="visually-hidden">
+                {ideal === undefined
+                  ? t('results.outcome', { ket, percent })
+                  : t('results.outcomeCompared', { ket, percent, ideal: formatPercent(language, ideal) })}
+              </span>
+              <span className="histogram-plot" aria-hidden="true">
+                {!compact && likely && <span className="histogram-value">{percent}</span>}
+                <span className="histogram-bars">
+                  {ideal !== undefined && (
+                    <span className="histogram-bar histogram-bar--ideal" style={{ height: `${ideal * 100}%` }} title={`${ket} ${formatPercent(language, ideal)}`} />
+                  )}
+                  <span className="histogram-bar" style={{ height: `${p * 100}%` }} title={`${ket} ${percent}`} />
+                </span>
+              </span>
+              <span className="histogram-label" data-likely={likely || undefined} aria-hidden="true">
+                {label}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {compared && (
+        <p className="histogram-legend" aria-hidden="true">
+          <span className="legend-item">
+            <span className="legend-swatch" />
+            {t('results.withNoise')}
+          </span>
+          <span className="legend-item">
+            <span className="legend-swatch legend-swatch--ideal" />
+            {t('results.withoutNoise')}
+          </span>
+        </p>
+      )}
+    </>
   );
 }
 
-export function Results({ result, pending }: { result: SimulationResult | null; pending: boolean }) {
+export function Results({ result, ideal, pending }: { result: SimulationResult | null; ideal: SimulationResult | null; pending: boolean }) {
   const t = useT();
   const large = useEditor((s) => s.circuit.qubits > BROWSER_QUBITS);
-  const densityLimited = useEditor((s) => isDynamic(s.circuit) && s.circuit.qubits > DENSITY_QUBITS);
+  const densityLimited = useEditor((s) => usesDensity(s.circuit) && s.circuit.qubits > DENSITY_QUBITS);
+  const circuit = useEditor((s) => s.circuit);
   const language = useEditor((s) => s.language);
   const learnMode = useEditor((s) => s.learnMode);
   const step = useEditor(currentStep);
@@ -67,12 +93,16 @@ export function Results({ result, pending }: { result: SimulationResult | null; 
 
   const state = result && stateAt(result, step);
   const vector = state && pureVector(state);
-  const p = state ? probabilities(state) : new Float64Array();
   const qubits = state?.qubits ?? 0;
+  const exact = state ? probabilities(state) : new Float64Array();
+  const readout = circuit.noise?.readout ?? 0;
+  const p = withReadout(exact, qubits, readout);
+  const idealState = hasGateNoise(circuit) ? ideal && stateAt(ideal, step) : state;
+  const idealP = hasNoise(circuit) && idealState && idealState.qubits === qubits ? probabilities(idealState) : null;
   const all = Array.from(p.keys());
   const bars = p.length <= MAX_ROWS ? all : mostLikely(p, all.filter((i) => p[i] > SHOWN_PROBABILITY));
-  const nonzero = all.filter((i) => p[i] > SHOWN_PROBABILITY);
-  const rows = mostLikely(p, nonzero);
+  const nonzero = all.filter((i) => exact[i] > SHOWN_PROBABILITY);
+  const rows = mostLikely(exact, nonzero);
   const subtitle = step === 0 ? t('results.atStart') : step >= end ? t('results.atEnd') : t('results.afterStep', { step });
 
   if (densityLimited) {
@@ -96,10 +126,11 @@ export function Results({ result, pending }: { result: SimulationResult | null; 
         </div>
         {state && (
           <>
-            <Histogram items={bars.map((i) => ({ label: ket(i, qubits), p: p[i] }))} vertical={qubits > 4} />
+            <Histogram items={bars.map((i) => ({ label: ket(i, qubits), p: p[i], ...(idealP && { ideal: idealP[i] }) }))} vertical={qubits > 4} />
             <p className="results-note">
               {t('results.bitOrder', { order: bitOrder(qubits) })}
               {bars.length < p.length && <> {t('results.topOutcomes', { shown: bars.length, total: p.length.toLocaleString(language) })}</>}
+              {readout > 0 && <> {t('results.readout', { percent: formatPercent(language, readout) })}</>}
             </p>
 
             {vector ? (
@@ -118,7 +149,7 @@ export function Results({ result, pending }: { result: SimulationResult | null; 
                       <tr key={i}>
                         <th scope="row">|{ket(i, qubits)}⟩</th>
                         <td>{formatComplex(vector.re[i], vector.im[i])}</td>
-                        <td>{formatPercent(language, p[i])}</td>
+                        <td>{formatPercent(language, exact[i])}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -11,6 +11,7 @@ import {
 } from '@dnd-kit/core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GateKind } from '../circuit/gates';
+import { hasGateNoise, withoutNoise } from '../circuit/model';
 import { useEditor } from '../editor/store';
 import { useT } from '../i18n/useT';
 import { detectLab } from '../lab/lab';
@@ -37,6 +38,9 @@ export function App() {
   const language = useEditor((s) => s.language);
   const circuit = useEditor((s) => s.circuit);
   const { result, pending } = useSimulation(circuit);
+  // A second worker simulates the circuit without its gate noise, for the comparison in the results.
+  const idealCircuit = useMemo(() => (hasGateNoise(circuit) ? withoutNoise(circuit) : null), [circuit]);
+  const { result: ideal } = useSimulation(idealCircuit);
   useShareLink();
   useEffect(() => {
     detectLab();
@@ -135,7 +139,7 @@ export function App() {
             <CircuitView ref={circuitRef} result={result} />
             <CodePanel />
           </main>
-          <Results result={result} pending={pending} />
+          <Results result={result} ideal={ideal} pending={pending} />
         </div>
       </div>
       <DragOverlay dropAnimation={null}>{dragging && <GateIcon kind={dragging} size="large" />}</DragOverlay>

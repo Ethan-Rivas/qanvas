@@ -20,6 +20,16 @@ const paletteGate = (page: Page, name: RegExp) => page.getByRole('complementary'
 
 const outcome = (page: Page, text: string) => page.locator('.results .visually-hidden', { hasText: text });
 
+/** Opens a circuit through a share link, built in the page with the same compression Qanvas uses. */
+async function openCircuit(page: Page, circuit: object) {
+  const hash = await page.evaluate(async (json) => {
+    const stream = new Blob([new TextEncoder().encode(json)]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+    return `#c=${btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
+  }, JSON.stringify({ circuit }));
+  await page.goto(`/${hash}`);
+}
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('qanvas.language', 'en'));
   await page.goto('/');
@@ -336,4 +346,11 @@ test('runs a gate only when a measurement gives 1', async ({ page }) => {
   await page.getByLabel('Runs').selectOption({ label: 'If q0 measured 1' });
   await expect(page.getByRole('region', { name: 'Circuit summary' }).getByRole('listitem').nth(2)).toHaveText('Step 3: Pauli-X (if q0 measured 1) on q1.');
   await expect(outcome(page, '|110⟩: 100%')).toBeVisible();
+});
+
+test('compares the outcomes with and without noise', async ({ page }) => {
+  await openCircuit(page, { qubits: 1, columns: [[{ gate: 'X', targets: [0] }]], noise: { oneQubit: 0.1, twoQubit: 0, readout: 0.02 } });
+  await expect(outcome(page, '|1⟩: 93.2% with noise, 100% without')).toBeVisible();
+  await expect(page.getByText('Readings are wrong 2% of the time', { exact: false })).toBeVisible();
+  await expect(page.getByText("there's no single list of amplitudes", { exact: false })).toBeVisible();
 });

@@ -9,9 +9,9 @@ export { stateAt } from './simulator';
 export type SimulationResult = Simulation & { circuit: Circuit };
 
 /** Runs the simulator off the main thread and returns the latest result for `circuit`. */
-export function useSimulation(circuit: Circuit): { result: SimulationResult | null; pending: boolean } {
+export function useSimulation(circuit: Circuit | null): { result: SimulationResult | null; pending: boolean } {
   const worker = useRef<Worker | null>(null);
-  const latest = useRef({ id: 0, circuit });
+  const latest = useRef<{ id: number; circuit: Circuit | null }>({ id: 0, circuit });
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [pending, setPending] = useState(true);
 
@@ -26,7 +26,8 @@ export function useSimulation(circuit: Circuit): { result: SimulationResult | nu
         console.error(response.error);
         return;
       }
-      setResult({ circuit: latest.current.circuit, qubits: latest.current.circuit.qubits, mixed: response.mixed, re: response.re, im: response.im });
+      const { circuit: simulated } = latest.current;
+      if (simulated) setResult({ circuit: simulated, qubits: simulated.qubits, mixed: response.mixed, re: response.re, im: response.im });
     };
     worker.current = w;
     return () => {
@@ -38,7 +39,7 @@ export function useSimulation(circuit: Circuit): { result: SimulationResult | nu
   useEffect(() => {
     latest.current = { id: latest.current.id + 1, circuit };
     // Every step's state of a larger circuit doesn't fit in the browser; quantum-lab runs those on Aer.
-    if (circuit.qubits > browserLimit(circuit)) {
+    if (!circuit || circuit.qubits > browserLimit(circuit)) {
       setResult(null);
       setPending(false);
       return;
