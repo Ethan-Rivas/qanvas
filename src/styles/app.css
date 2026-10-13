@@ -707,6 +707,56 @@ button:disabled {
   color: var(--ink-muted);
 }
 
+.noise-panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.noise-title {
+  margin: 0;
+  font-size: 15px;
+}
+
+.noise-intro {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.noise-rate {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5em;
+  align-items: center;
+  column-gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.noise-rate label {
+  grid-column: 1 / -1;
+}
+
+.noise-rate input {
+  width: 100%;
+  height: var(--target);
+  margin: 0;
+  accent-color: var(--brand);
+}
+
+.noise-rate output {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-align: right;
+}
+
+.noise-panel .button {
+  justify-self: start;
+}
+
 .notice-slot {
   flex: 1 1 auto;
   display: flex;

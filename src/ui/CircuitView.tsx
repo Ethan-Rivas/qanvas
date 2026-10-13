@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useRef, useState, type CSSProperties, type React
 import { formatAngle, parseAngle } from '../circuit/angle';
 import type { OpLocation } from '../circuit/edits';
 import { hasAngle, kindOf, type GateKind } from '../circuit/gates';
-import { BROWSER_QUBITS, GATE_RULES, operationQubits, readableQubits, type Circuit, type Condition, type Operation } from '../circuit/model';
+import { BROWSER_QUBITS, GATE_RULES, hasNoise, operationQubits, readableQubits, type Circuit, type Condition, type Operation } from '../circuit/model';
 import { currentStep, useEditor, type Notice } from '../editor/store';
 import { pluralKey, type Language, type MessageKey, type Translate } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
@@ -11,6 +11,7 @@ import { qubitLimit, useLab } from '../lab/lab';
 import type { SimulationResult } from '../sim/useSimulation';
 import { cellId, type DragData, type DropData } from './dnd';
 import { PartGlyph, type PartShape } from './GateGlyph';
+import { NoisePanel } from './NoisePanel';
 import { StepCallout, Stepper } from './Stepper';
 
 const MIN_COLUMNS = 6;
@@ -262,6 +263,7 @@ export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | 
   const limit = qubitLimit(useLab((s) => s.lab));
   const cardRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [noiseOpen, setNoiseOpen] = useState(false);
 
   const parts = partsOf(circuit);
   const conditionReads = new Map<string, Condition['value']>();
@@ -291,6 +293,7 @@ export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | 
         <span className="circuit-summary">
           {t(pluralKey(language, 'circuit.qubits', circuit.qubits), { count: circuit.qubits })} ·{' '}
           {t(pluralKey(language, 'circuit.steps', circuit.columns.length), { count: circuit.columns.length })}
+          {hasNoise(circuit) && <> · {t('circuit.noiseOn')}</>}
         </span>
         <div className="notice-slot" role="status">
           {notice && (
@@ -304,10 +307,14 @@ export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | 
             </span>
           )}
         </div>
+        <button type="button" className="button" aria-expanded={noiseOpen} aria-controls="noise-panel" onClick={() => setNoiseOpen(!noiseOpen)}>
+          {t('noise.button')}
+        </button>
         <button type="button" className="button" onClick={addQubit} disabled={circuit.qubits >= limit}>
           + {t('circuit.addQubit')}
         </button>
       </div>
+      {noiseOpen && <NoisePanel />}
 
       <CircuitSummary circuit={circuit} />
       <div ref={cardRef} className="circuit-card" style={{ '--step': step } as CSSProperties}>

@@ -354,3 +354,34 @@ test('compares the outcomes with and without noise', async ({ page }) => {
   await expect(page.getByText('Readings are wrong 2% of the time', { exact: false })).toBeVisible();
   await expect(page.getByText("there's no single list of amplitudes", { exact: false })).toBeVisible();
 });
+
+test('adds noise from the toolbar, keeps it in the link and undoes a slider run in one step', async ({ page }) => {
+  await drag(page, paletteGate(page, /Pauli-X/), cell(page, 0, 0));
+  const noiseButton = page.getByRole('button', { name: 'Noise', exact: true });
+  await noiseButton.click();
+  await expect(noiseButton).toHaveAttribute('aria-expanded', 'true');
+  const oneQubit = page.getByLabel('One-qubit gates');
+  await oneQubit.fill('10');
+  await expect(page.getByText('3 qubits · 1 step · noise on')).toBeVisible();
+  await expect(outcome(page, '|100⟩: 95% with noise, 100% without')).toBeVisible();
+  await oneQubit.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(oneQubit).toHaveValue('9.9');
+
+  const describe = (violations: { id: string; nodes: { target: unknown }[] }[]) => violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`);
+  expect(describe((await new AxeBuilder({ page }).include('#noise-panel').analyze()).violations)).toEqual([]);
+
+  // The fill and the arrow key are one run of noise changes, so one undo removes both.
+  await page.locator('.circuit-summary').click();
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(page.getByText('3 qubits · 1 step', { exact: true })).toBeVisible();
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  await expect(page.getByText('3 qubits · 1 step · noise on')).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText('3 qubits · 1 step · noise on')).toBeVisible();
+  await page.getByRole('button', { name: 'Noise', exact: true }).click();
+  await expect(page.getByLabel('One-qubit gates')).toHaveValue('9.9');
+  await page.getByRole('button', { name: 'Turn noise off' }).click();
+  await expect(page.getByText('3 qubits · 1 step', { exact: true })).toBeVisible();
+});
