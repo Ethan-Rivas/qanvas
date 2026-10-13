@@ -233,9 +233,7 @@
   "import.error.too-many-qubits": "This circuit uses {detail} qubits; Qanvas works with up to {max}.",
   "import.error.unknown-register": "Line {line}: there's no register called {detail}.",
   "import.error.unsupported-gate": "Line {line}: Qanvas doesn't have the {detail} gate yet.",
-  "import.error.classical-control": "Line {line}: Qanvas can't act on measurement results yet.",
-  "import.error.reset": "Line {line}: Qanvas can't reset qubits yet.",
-  "import.error.after-measure": "Line {line}: a gate comes after a measurement on the same qubit. In Qanvas, measurements go last.",
+  "import.error.classical-control": "Line {line}: Qanvas can only make a gate depend on a one-bit register that a measurement just wrote to.",
   "error.bad-link": "This link doesn't contain a valid circuit.",
   "a11y.summary": "Circuit summary",
   "a11y.empty": "The circuit is empty.",
@@ -305,8 +303,6 @@
   "code.lab.timeout": "The code took longer than {seconds} seconds, so it was stopped.",
   "code.lab.unreachable": "Couldn't reach quantum-lab. Check that the lab is running.",
   "code.lab.failed": "quantum-lab couldn't run this code.",
-  "code.lab.qasm.after-measure": "A gate comes after a measurement on the same qubit. In Qanvas, measurements go last.",
-  "code.lab.qasm.classical-control": "The circuit acts on measurement results, which Qanvas can't draw yet.",
-  "code.lab.qasm.reset": "The circuit resets a qubit, which Qanvas can't draw yet.",
+  "code.lab.qasm.classical-control": "The circuit acts on measurement results in a way Qanvas can't draw yet.",
   "code.lab.qasm.other": "Qanvas couldn't draw the circuit this code builds."
 }

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { Circuit } from '../circuit/model';
+import { sameCircuit, type Circuit } from '../circuit/model';
 import { translator } from '../i18n/i18n';
 import { finalState } from '../sim/simulator';
 import { codeText, generateCode } from './generate';
@@ -50,7 +50,38 @@ describe('OpenQASM import', () => {
 
   it('explains what it cannot read, with the line', () => {
     expect(importQasm('OPENQASM 2.0;\nqreg q[1];\nu3(0,0,0) q[0];')).toEqual({ ok: false, error: { code: 'unsupported-gate', line: 3, detail: 'u3' } });
-    expect(importQasm('OPENQASM 2.0;\nqreg q[1];\ncreg c[1];\nmeasure q[0] -> c[0];\nh q[0];')).toMatchObject({ ok: false, error: { code: 'after-measure', line: 5 } });
     expect(importQasm('OPENQASM 3.0;\nqubit[2] q;')).toMatchObject({ ok: false, error: { code: 'version', line: 1 } });
+  });
+
+  it('reads reset, gates after a measurement and Qiskit-style conditions', () => {
+    const source = 'OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[2];\ncreg c0[1];\ncreg c1[1];\nh q[0];\nmeasure q[0] -> c0[0];\nif (c0 == 1) x q[1];\nreset q[0];\nh q[0];';
+    expect(importQasm(source)).toEqual({
+      ok: true,
+      circuit: {
+        qubits: 2,
+        columns: [
+          [{ gate: 'H', targets: [0] }],
+          [{ gate: 'M', targets: [0] }],
+          [{ gate: 'X', targets: [1], condition: { qubit: 0, value: 1 } }],
+          [{ gate: 'RESET', targets: [0] }],
+          [{ gate: 'H', targets: [0] }],
+        ],
+      },
+    });
+  });
+
+  it('reads back its own export of a dynamic circuit', () => {
+    const circuit: Circuit = {
+      qubits: 2,
+      columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'M', targets: [0] }], [{ gate: 'Z', targets: [1], condition: { qubit: 0, value: 0 } }], [{ gate: 'RESET', targets: [0] }]],
+    };
+    const result = importQasm(codeText(generateCode('qasm', circuit, translator('en'))));
+    expect(result.ok && sameCircuit(result.circuit, circuit)).toBe(true);
+  });
+
+  it('refuses conditions it cannot draw', () => {
+    const header = 'OPENQASM 2.0;\nqreg q[2];\ncreg c[2];\n';
+    expect(importQasm(`${header}measure q[0] -> c[0];\nif(c==1) x q[1];`)).toMatchObject({ ok: false, error: { code: 'classical-control', line: 5 } });
+    expect(importQasm('OPENQASM 2.0;\nqreg q[2];\ncreg d[1];\nmeasure q[0] -> d[0];\nx q[0];\nif(d==1) x q[1];')).toMatchObject({ ok: false, error: { code: 'classical-control', line: 6 } });
   });
 });

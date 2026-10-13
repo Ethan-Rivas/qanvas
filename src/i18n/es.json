@@ -233,9 +233,7 @@
   "import.error.too-many-qubits": "Este circuito usa {detail} qubits; Qanvas trabaja con hasta {max}.",
   "import.error.unknown-register": "Línea {line}: no hay ningún registro llamado {detail}.",
   "import.error.unsupported-gate": "Línea {line}: Qanvas todavía no tiene la compuerta {detail}.",
-  "import.error.classical-control": "Línea {line}: Qanvas todavía no puede actuar según los resultados de una medición.",
-  "import.error.reset": "Línea {line}: Qanvas todavía no puede reiniciar qubits.",
-  "import.error.after-measure": "Línea {line}: hay una compuerta después de una medición en el mismo qubit. En Qanvas, las mediciones van al final.",
+  "import.error.classical-control": "Línea {line}: Qanvas solo puede hacer que una compuerta dependa de un registro de un bit que una medición acaba de escribir.",
   "error.bad-link": "Este enlace no contiene un circuito válido.",
   "a11y.summary": "Resumen del circuito",
   "a11y.empty": "El circuito está vacío.",
@@ -305,8 +303,6 @@
   "code.lab.timeout": "El código tardó más de {seconds} segundos, así que se detuvo.",
   "code.lab.unreachable": "No se pudo conectar con quantum-lab. Revisa que el laboratorio esté corriendo.",
   "code.lab.failed": "quantum-lab no pudo correr este código.",
-  "code.lab.qasm.after-measure": "Hay una compuerta después de una medición en el mismo qubit. En Qanvas, las mediciones van al final.",
-  "code.lab.qasm.classical-control": "El circuito actúa según resultados de mediciones, algo que Qanvas todavía no puede dibujar.",
-  "code.lab.qasm.reset": "El circuito reinicia un qubit, algo que Qanvas todavía no puede dibujar.",
+  "code.lab.qasm.classical-control": "El circuito usa resultados de medición de una forma que Qanvas todavía no puede dibujar.",
   "code.lab.qasm.other": "Qanvas no pudo dibujar el circuito que arma este código."
 }

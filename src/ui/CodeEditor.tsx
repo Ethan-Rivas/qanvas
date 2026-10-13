@@ -109,7 +109,7 @@ export function CodeEditor({
     if (p.kind === 'qasm') {
       const { code, line, detail } = p.error;
       // Line numbers from the lab's OpenQASM wouldn't match the code on screen.
-      if (p.fromLab) return t(`code.lab.qasm.${code === 'after-measure' || code === 'classical-control' || code === 'reset' ? code : 'other'}`, { detail: detail ?? '' });
+      if (p.fromLab) return t(`code.lab.qasm.${code === 'classical-control' ? code : 'other'}`, { detail: detail ?? '' });
       const key: MessageKey = code === 'syntax' && line === undefined ? 'import.error.invalid' : `import.error.${code}`;
       return t(key, { line: line ?? '', detail: detail ?? '', max: MAX_QUBITS });
     }
