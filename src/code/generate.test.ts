@@ -46,3 +46,42 @@ describe('code generators', () => {
     expect(angleExpression(1e-7)).toBe('1.0e-7');
   });
 });
+
+const dynamic: Circuit = {
+  qubits: 2,
+  columns: [
+    [{ gate: 'H', targets: [0] }],
+    [{ gate: 'M', targets: [0] }],
+    [{ gate: 'X', targets: [1], condition: { qubit: 0, value: 1 } }],
+    [{ gate: 'Sdg', targets: [1], condition: { qubit: 0, value: 0 } }],
+    [{ gate: 'RESET', targets: [0] }],
+    [{ gate: 'M', targets: [0, 1] }],
+  ],
+};
+
+describe('dynamic circuits', () => {
+  it('writes one classical register per qubit and if_test in Qiskit', () => {
+    const text = codeText(generateCode('qiskit', dynamic, t));
+    expect(text).toContain('from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister\n');
+    expect(text).toContain('c = [ClassicalRegister(1, f"c{q}") for q in range(2)]\nqc = QuantumCircuit(QuantumRegister(2, "q"), *c)\n');
+    expect(text).toContain('with qc.if_test((c[0], 1)):\n    qc.x(1)\nwith qc.if_test((c[0], 0)):\n    qc.sdg(1)\nqc.reset(0)\n');
+  });
+
+  it('writes reset and if in OpenQASM, and distinct measurement keys in Cirq', () => {
+    expect(codeText(generateCode('qasm', dynamic, t))).toContain('creg c0[1];\ncreg c1[1];\nh q[0];\nmeasure q[0] -> c0[0];\nif(c0==1) x q[1];\nif(c0==0) sdg q[1];\nreset q[0];\nmeasure q[0] -> c0[0]; measure q[1] -> c1[0];\n');
+    const cirq = codeText(generateCode('cirq', dynamic, t));
+    expect(cirq).toContain('cirq.Moment(cirq.X(q[1]).with_classical_controls("q0")),');
+    expect(cirq).toContain('cirq.Moment(cirq.reset(q[0])),');
+    expect(cirq).toContain('(cirq.S**-1)(q[1]).with_classical_controls(sympy.Eq(sympy.Symbol("q0"), 0))');
+    expect(cirq).toContain('cirq.measure(q[0], key="q0_2"), cirq.measure(q[1], key="q1")');
+  });
+
+  it('writes reset as measure-and-flip and conditions as if_then in pyQuil', () => {
+    const text = codeText(generateCode('pyquil', dynamic, t));
+    expect(text).toContain('reset = program.declare("reset", "BIT", 2)\n');
+    expect(text).toContain('program.if_then(ro[0], Program(X(1)), Program())\n');
+    expect(text).toContain('program += MEASURE(0, reset[0])');
+    expect(text).toContain('program.if_then(reset[0], Program(X(0)), Program())\n');
+    expect(text).toContain('program.if_then(ro[0], Program(), Program(PHASE(-pi/2, 1)))  # S†\n');
+  });
+});

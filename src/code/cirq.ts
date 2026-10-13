@@ -1,6 +1,6 @@
 import { kindOf } from '../circuit/gates';
 import type { Operation } from '../circuit/model';
-import { numberLiteral, angleExpression, piFraction, usesPi, type CodeLine, type Generator } from './common';
+import { numberLiteral, angleExpression, measurementKey, piFraction, usesPi, type CodeLine, type Generator } from './common';
 
 const SIMPLE: Record<string, string> = { H: 'cirq.H', X: 'cirq.X', Y: 'cirq.Y', Z: 'cirq.Z', S: 'cirq.S', T: 'cirq.T', Sdg: '(cirq.S**-1)', Tdg: '(cirq.T**-1)' };
 const ROTATION: Record<string, string> = { RX: 'cirq.rx', RY: 'cirq.ry', RZ: 'cirq.rz' };
@@ -13,7 +13,7 @@ function phaseExponent(angle: number): string {
   return d === 1 ? `${n}` : `${n}/${d}`;
 }
 
-function gate(op: Operation): string {
+function plainGate(op: Operation, count: number[]): string {
   const q = (i: number) => `q[${i}]`;
   const [target] = op.targets;
   const controls = op.controls ?? [];
@@ -27,7 +27,9 @@ function gate(op: Operation): string {
     case 'SWAP':
       return `cirq.SWAP(${q(op.targets[0])}, ${q(op.targets[1])})`;
     case 'M':
-      return op.targets.map((t) => `cirq.measure(${q(t)}, key="q${t}")`).join(', ');
+      return op.targets.map((t) => `cirq.measure(${q(t)}, key="${measurementKey(t, ++count[t])}")`).join(', ');
+    case 'RESET':
+      return `cirq.reset(${q(target)})`;
     case 'P':
       return `cirq.ZPowGate(exponent=${phaseExponent(op.angle!)})(${q(target)})`;
     case 'RX':
@@ -39,16 +41,27 @@ function gate(op: Operation): string {
   }
 }
 
+function gate(op: Operation, count: number[]): string {
+  const text = plainGate(op, count);
+  if (!op.condition) return text;
+  const key = measurementKey(op.condition.qubit, count[op.condition.qubit]);
+  return op.condition.value === 1
+    ? `${text}.with_classical_controls("${key}")`
+    : `${text}.with_classical_controls(sympy.Eq(sympy.Symbol("${key}"), 0))`;
+}
+
 /** One `cirq.Moment` per column, so Cirq keeps the same steps as Qanvas. */
 export const toCirq: Generator = (circuit) => {
   const body: CodeLine[] = [{ text: `q = cirq.LineQubit.range(${circuit.qubits})` }];
+  const count = new Array<number>(circuit.qubits).fill(0);
   if (circuit.columns.length === 0) {
     body.push({ text: 'circuit = cirq.Circuit()' });
   } else {
     body.push({ text: 'circuit = cirq.Circuit(' });
-    circuit.columns.forEach((ops, column) => body.push({ text: `    cirq.Moment(${ops.map(gate).join(', ')}),`, column }));
+    circuit.columns.forEach((ops, column) => body.push({ text: `    cirq.Moment(${ops.map((op) => gate(op, count)).join(', ')}),`, column }));
     body.push({ text: ')' });
   }
-  const imports = ['import cirq', ...(usesPi(body) ? ['from math import pi'] : [])];
+  const usesSympy = body.some((line) => line.text.includes('sympy.'));
+  const imports = ['import cirq', ...(usesSympy ? ['import sympy'] : []), ...(usesPi(body) ? ['from math import pi'] : [])];
   return [...imports.map((text) => ({ text })), { text: '' }, ...body];
 };

@@ -1,35 +1,52 @@
-import type { Circuit } from '../circuit/model';
+import { isDynamic, operationQubits, type Circuit } from '../circuit/model';
 import type { Translate } from '../i18n/i18n';
-import { measures, operations } from './common';
+import { measurementCounts, measurementKey, measures, operations } from './common';
 import { generateCode } from './generate';
 
 export type PythonFormat = 'qiskit' | 'cirq' | 'pyquil';
 export const PYTHON_FORMATS: PythonFormat[] = ['qiskit', 'cirq', 'pyquil'];
 export const SHOTS = 1000;
 
-/** The qubits whose outcomes are counted: the measured ones, or all of them when nothing is measured. */
+function lastGates(circuit: Circuit): Map<number, string> {
+  const last = new Map<number, string>();
+  for (const { op } of operations(circuit)) for (const q of operationQubits(op)) last.set(q, op.gate);
+  return last;
+}
+
+/** The qubits whose outcomes are counted: the ones that end with a measurement, or all of them when none does. */
 export function countedQubits(circuit: Circuit): number[] {
-  const measured = new Set(operations(circuit).flatMap(({ op }) => (op.gate === 'M' ? op.targets : [])));
+  const last = lastGates(circuit);
   const all = Array.from({ length: circuit.qubits }, (_, q) => q);
-  return measured.size > 0 ? all.filter((q) => measured.has(q)) : all;
+  const measured = all.filter((q) => last.get(q) === 'M');
+  return measured.length > 0 ? measured : all;
+}
+
+export function measuresAtEnd(circuit: Circuit): boolean {
+  return [...lastGates(circuit).values()].includes('M');
 }
 
 const python = (text: string) => JSON.stringify(text);
 
 /** Code that runs the circuit SHOTS times and leaves `counts`, keyed by outcomes with q0 first. */
 function runCode(format: PythonFormat, circuit: Circuit, t: Translate): { imports: string[]; body: string[] } {
-  const counted = `measured = [${countedQubits(circuit).join(', ')}]`;
-  const measureAll = measures(circuit) ? [] : [`# ${t('download.measureAll')}`];
+  const atEnd = measuresAtEnd(circuit);
+  const measured = countedQubits(circuit);
+  const counted = `measured = [${measured.join(', ')}]`;
+  const measureAll = atEnd ? [] : [`# ${t('download.measureAll')}`];
   const tally = ['counts = {}', 'for key in keys:', '    counts[key] = counts.get(key, 0) + 1'];
   switch (format) {
-    case 'qiskit':
+    case 'qiskit': {
+      const sampler = isDynamic(circuit)
+        ? { imports: ['from qiskit_aer.primitives import SamplerV2'], note: [`# ${t('download.qiskitAer')}`], run: 'SamplerV2()' }
+        : { imports: ['from qiskit.primitives import StatevectorSampler'], note: [], run: 'StatevectorSampler()' };
       return {
-        imports: ['from qiskit.primitives import StatevectorSampler'],
+        imports: sampler.imports,
         body: [
           counted,
           ...measureAll,
-          ...(measures(circuit) ? [] : ['qc.measure_all()']),
-          `result = StatevectorSampler().run([qc], shots=${SHOTS}).result()[0]`,
+          ...(atEnd ? [] : [measures(circuit) ? `qc.measure(range(${circuit.qubits}), range(${circuit.qubits}))` : 'qc.measure_all()']),
+          ...sampler.note,
+          `result = ${sampler.run}.run([qc], shots=${SHOTS}).result()[0]`,
           `# ${t('download.qiskitReverse')}`,
           'counts = {}',
           'for bits, n in result.join_data().get_counts().items():',
@@ -37,25 +54,31 @@ function runCode(format: PythonFormat, circuit: Circuit, t: Translate): { import
           '    counts[key] = counts.get(key, 0) + n',
         ],
       };
-    case 'cirq':
+    }
+    case 'cirq': {
+      const counts = measurementCounts(circuit);
+      const keys = measured.map((q) => measurementKey(q, atEnd ? counts[q] : counts[q] + 1));
+      const finalMeasurements = measured.map((q, k) => `cirq.measure(q[${q}], key="${keys[k]}")`).join(', ');
       return {
         imports: [],
         body: [
           counted,
           ...measureAll,
-          ...(measures(circuit) ? [] : ['circuit.append(cirq.measure(q[i], key=f"q{i}") for i in measured)']),
+          ...(atEnd ? [] : [`circuit.append(cirq.Moment(${finalMeasurements}))`]),
+          `keys = [${keys.map((key) => `"${key}"`).join(', ')}]`,
           `result = cirq.Simulator().run(circuit, repetitions=${SHOTS})`,
-          'histogram = result.multi_measurement_histogram(keys=[f"q{i}" for i in measured])',
+          'histogram = result.multi_measurement_histogram(keys=keys)',
           'counts = {"".join(map(str, bits)): n for bits, n in histogram.items()}',
         ],
       };
+    }
     case 'pyquil':
       return {
         imports: ['import warnings', 'from pyquil import get_qc', ...(measures(circuit) ? [] : ['from pyquil.gates import MEASURE'])],
         body: [
           counted,
           ...measureAll,
-          ...(measures(circuit) ? [] : [`ro = program.declare("ro", "BIT", ${circuit.qubits})`, 'program += [MEASURE(q, ro[q]) for q in measured]']),
+          ...(atEnd ? [] : [...(measures(circuit) ? [] : [`ro = program.declare("ro", "BIT", ${circuit.qubits})`]), 'program += [MEASURE(q, ro[q]) for q in measured]']),
           `# ${t('download.pyquil5')}`,
           'warnings.filterwarnings("ignore", message=".*pyQuil v5")',
           `# ${t('download.pyqvm', { qubits: circuit.qubits })}`,

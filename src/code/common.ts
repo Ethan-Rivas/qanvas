@@ -52,3 +52,19 @@ export function measures(circuit: Circuit): boolean {
 export function operations(circuit: Circuit): { op: Operation; column: number }[] {
   return circuit.columns.flatMap((ops, column) => ops.map((op) => ({ op, column })));
 }
+
+export function hasConditions(circuit: Circuit): boolean {
+  return operations(circuit).some(({ op }) => op.condition !== undefined);
+}
+
+/** Cirq's key for a qubit's nth measurement: each key can be used once, so q1, then q1_2, q1_3… */
+export function measurementKey(qubit: number, nth: number): string {
+  return nth === 1 ? `q${qubit}` : `q${qubit}_${nth}`;
+}
+
+/** How many times each qubit is measured. */
+export function measurementCounts(circuit: Circuit): number[] {
+  const counts = new Array<number>(circuit.qubits).fill(0);
+  for (const { op } of operations(circuit)) if (op.gate === 'M') op.targets.forEach((q) => counts[q]++);
+  return counts;
+}
