@@ -25,7 +25,6 @@ export interface Operation {
   condition?: Condition;
 }
 
-/** Each column holds operations that run at the same time, on distinct qubits. */
 /** Error rates for the whole circuit, each a probability. */
 export interface Noise {
   /** After each one-qubit gate, the chance its qubit is left in a random state (Qiskit's depolarizing_error). */
@@ -38,6 +37,7 @@ export interface Noise {
 
 export const NOISE_LIMITS: Noise = { oneQubit: 0.1, twoQubit: 0.1, readout: 0.2 };
 
+/** Each column holds operations that run at the same time, on distinct qubits. */
 export interface Circuit {
   qubits: number;
   columns: Operation[][];
