@@ -5,8 +5,9 @@ import { join, resolve } from 'node:path';
 import { expect, test } from 'vitest';
 import type { Circuit } from '../circuit/model';
 import { translator } from '../i18n/i18n';
-import { finalState } from '../sim/simulator';
-import { countedQubits, notebook, PYTHON_FORMATS, pythonScript, SHOTS } from './download';
+import { densityOf } from '../sim/analysis';
+import { finalState, probabilities } from '../sim/simulator';
+import { countedQubits, measuresAtEnd, notebook, PYTHON_FORMATS, pythonScript, SHOTS } from './download';
 import { CODE_FORMATS, codeText, generateCode } from './generate';
 import { importQasm } from './qasmImport';
 
@@ -73,14 +74,27 @@ test(`exported code runs in Python and matches Qanvas on ${cases.length} circuit
 
 /** Probabilities of each outcome over the counted qubits, keyed with q0 first like the downloads. */
 function outcomeProbabilities(circuit: Circuit): Map<string, number> {
-  const { re, im } = finalState(circuit);
+  const p = probabilities(finalState(circuit));
   const counted = countedQubits(circuit);
-  const probabilities = new Map<string, number>();
-  re.forEach((r, index) => {
+  const result = new Map<string, number>();
+  p.forEach((value, index) => {
     const key = counted.map((q) => (index >> (circuit.qubits - 1 - q)) & 1).join('');
-    probabilities.set(key, (probabilities.get(key) ?? 0) + r * r + im[index] * im[index]);
+    result.set(key, (result.get(key) ?? 0) + value);
   });
-  return probabilities;
+  return result;
+}
+
+function countFailures(label: string, counts: Record<string, number>, expected: Map<string, number>): string[] {
+  const failures: string[] = [];
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  if (total !== SHOTS) failures.push(`${label}: ${total} shots instead of ${SHOTS}`);
+  for (const [key, p] of expected) {
+    const frequency = (counts[key] ?? 0) / SHOTS;
+    // Five standard deviations of a binomial count, plus a little room for outcomes near 0 or 1.
+    if (Math.abs(frequency - p) > 5 * Math.sqrt((p * (1 - p)) / SHOTS) + 0.01) failures.push(`${label}: ${key} seen ${frequency}, expected ${p}`);
+  }
+  for (const key of Object.keys(counts)) if (!((expected.get(key) ?? 0) > 1e-9)) failures.push(`${label}: unexpected outcome ${key}`);
+  return failures;
 }
 
 test('downloaded scripts and notebooks run and their counts agree with Qanvas', () => {
@@ -105,15 +119,44 @@ test('downloaded scripts and notebooks run and their counts agree with Qanvas', 
         failures.push(`${name} [${run}]: ${result.error}`);
         continue;
       }
-      const total = Object.values(result.counts).reduce((a, b) => a + b, 0);
-      if (total !== SHOTS) failures.push(`${name} [${run}]: ${total} shots instead of ${SHOTS}`);
-      for (const [key, p] of probabilities) {
-        const frequency = (result.counts[key] ?? 0) / SHOTS;
-        // Five standard deviations of a binomial count, plus a little room for outcomes near 0 or 1.
-        if (Math.abs(frequency - p) > 5 * Math.sqrt((p * (1 - p)) / SHOTS) + 0.01) failures.push(`${name} [${run}]: ${key} seen ${frequency}, expected ${p}`);
-      }
-      for (const key of Object.keys(result.counts)) if (!((probabilities.get(key) ?? 0) > 1e-9)) failures.push(`${name} [${run}]: unexpected outcome ${key}`);
+      failures.push(...countFailures(`${name} [${run}]`, result.counts, probabilities));
     }
+  });
+  expect(failures).toEqual([]);
+}, 1_200_000);
+
+test('code for circuits that measure partway through runs and agrees with Qanvas', () => {
+  const t = translator('en');
+  const dynamic: Case[] = JSON.parse(readFileSync(join(ROOT, 'reference/data/mid-circuit.json'), 'utf8'));
+  const picked = [...dynamic.filter((c) => !c.name.startsWith('random')), ...dynamic.filter((c) => c.name.startsWith('random')).slice(0, 12)];
+  const input = picked.map(({ name, circuit }) => ({
+    name,
+    script: Object.fromEntries(PYTHON_FORMATS.map((format) => [format, pythonScript(format, circuit, t)])),
+    qasm: codeText(generateCode('qasm', circuit, t)),
+    qiskit: codeText(generateCode('qiskit', circuit, t)),
+    counted: countedQubits(circuit),
+    measuresAtEnd: measuresAtEnd(circuit),
+    shots: SHOTS,
+  }));
+  const output = runInLab('scripts/run_dynamic.py', input) as { name: string; results: Record<string, { counts: Record<string, number> } | { error: string }>; qiskitQasm: string }[];
+
+  const failures: string[] = [];
+  output.forEach(({ name, results, qiskitQasm }, i) => {
+    const { circuit } = picked[i];
+    const expected = outcomeProbabilities(circuit);
+    for (const [run, result] of Object.entries(results)) {
+      if ('error' in result) failures.push(`${name} [${run}]: ${result.error}`);
+      else failures.push(...countFailures(`${name} [${run}]`, result.counts, expected));
+    }
+    const imported = importQasm(qiskitQasm);
+    if (!imported.ok) {
+      failures.push(`${name} [import from Qiskit]: ${JSON.stringify(imported.error)} ${qiskitQasm.slice(0, 200)}`);
+      return;
+    }
+    const a = densityOf(finalState(imported.circuit));
+    const b = densityOf(finalState(circuit));
+    const worst = Math.max(...Array.from(a.re, (re, k) => Math.hypot(re - b.re[k], a.im[k] - b.im[k])));
+    if (!(worst <= TOLERANCE)) failures.push(`${name} [import from Qiskit]: off by ${worst}`);
   });
   expect(failures).toEqual([]);
 }, 1_200_000);
