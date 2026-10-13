@@ -1503,6 +1503,7 @@ button:disabled {
   background: transparent;
   border: 1.5px dashed var(--quantum-ideal);
   border-bottom: none;
+  min-height: 0;
 }
 
 .histogram-legend {
