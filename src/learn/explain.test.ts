@@ -53,6 +53,12 @@ describe('step explanations', () => {
     expect(flipped.sentences.at(-1)).toBe('Only the global phase changed. No measurement can tell the difference.');
   });
 
+  it('explains a global phase the same way when the circuit measures partway through later', () => {
+    const columns: Circuit['columns'] = [[{ gate: 'X', targets: [0] }], [{ gate: 'Z', targets: [0] }]];
+    const dynamic: Circuit = { qubits: 1, columns: [...columns, [{ gate: 'M', targets: [0] }], [{ gate: 'H', targets: [0] }]] };
+    expect(explain(dynamic, 2)).toEqual(explain({ qubits: 1, columns }, 2));
+  });
+
   it('describes same-kind gates in one column together', () => {
     const step = explain({ qubits: 2, columns: [[{ gate: 'H', targets: [0] }, { gate: 'H', targets: [1] }]] }, 1);
     expect(step.label).toBe('H');

@@ -1,9 +1,9 @@
 import { formatAngle } from '../circuit/angle';
 import { GATE_SYMBOL, kindOf, type GateKind } from '../circuit/gates';
-import type { Circuit, Operation } from '../circuit/model';
+import { gateError, partwayMeasurements, type Circuit, type Operation } from '../circuit/model';
 import { pluralKey, type Language, type MessageKey, type Translate } from '../i18n/i18n';
 import { blochVector, formatState, isEntangled, pureVector, sameState, sameUpToPhase } from '../sim/analysis';
-import type { QuantumState, StateVector } from '../sim/simulator';
+import { isMixed, simulate, type QuantumState, type StateVector } from '../sim/simulator';
 
 export interface StepExplanation {
   label: string;
@@ -71,6 +71,15 @@ function entanglementSentences(before: StateVector, after: StateVector, t: Trans
   return sentences;
 }
 
+/** How many columns at the start keep the state pure: none resets, measures partway through or adds gate noise. */
+function pureColumnCount(circuit: Circuit): number {
+  const partway = partwayMeasurements(circuit);
+  const first = circuit.columns.findIndex((column, c) =>
+    column.some((op) => op.gate === 'RESET' || (op.gate === 'M' && op.targets.some((q) => partway.has(`${c}:${q}`))) || gateError(op, circuit.noise) > 0),
+  );
+  return first === -1 ? circuit.columns.length : first;
+}
+
 /** Explains column `step − 1`, given the states before and after it. */
 export function explainStep(
   circuit: Circuit,
@@ -80,6 +89,12 @@ export function explainStep(
   t: Translate,
   language: Language,
 ): StepExplanation {
+  // A density matrix has no global phase, so the pure steps are replayed on the state vector, to be
+  // explained the same way as in a circuit that never needs the density matrix.
+  if (isMixed(before) && step <= pureColumnCount(circuit)) {
+    const states = simulate({ qubits: circuit.qubits, columns: circuit.columns.slice(0, step) });
+    [before, after] = [states[step - 1], states[step]];
+  }
   const column = circuit.columns[step - 1];
   const kinds = new Set(column.map(kindOf));
   const title = column.length === 1 ? t(`learn.${kindOf(column[0])}.title` as MessageKey) : t('learn.many.title', { count: column.length });
