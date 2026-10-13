@@ -995,7 +995,12 @@ button:disabled {
 }
 
 .condition-field {
-  grid-template-columns: auto minmax(120px, max-content);
+  grid-template-columns: auto minmax(0, max-content);
+}
+
+.condition-field select {
+  min-width: 120px;
+  max-width: 100%;
 }
 
 .angle-field input[aria-invalid] {
