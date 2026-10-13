@@ -59,7 +59,7 @@ export function Histogram({ items, vertical }: { items: { label: string; p: numb
 export function Results({ result, pending }: { result: SimulationResult | null; pending: boolean }) {
   const t = useT();
   const large = useEditor((s) => s.circuit.qubits > BROWSER_QUBITS);
-  const densityLimited = useEditor((s) => !large && isDynamic(s.circuit) && s.circuit.qubits > DENSITY_QUBITS);
+  const densityLimited = useEditor((s) => isDynamic(s.circuit) && s.circuit.qubits > DENSITY_QUBITS);
   const language = useEditor((s) => s.language);
   const learnMode = useEditor((s) => s.learnMode);
   const step = useEditor(currentStep);
@@ -75,7 +75,6 @@ export function Results({ result, pending }: { result: SimulationResult | null; 
   const rows = mostLikely(p, nonzero);
   const subtitle = step === 0 ? t('results.atStart') : step >= end ? t('results.atEnd') : t('results.afterStep', { step });
 
-  if (large) return <AerResults />;
   if (densityLimited) {
     return (
       <aside className="results" aria-label={t('results.title')}>
@@ -86,6 +85,7 @@ export function Results({ result, pending }: { result: SimulationResult | null; 
       </aside>
     );
   }
+  if (large) return <AerResults />;
 
   return (
     <aside className="results" aria-label={t('results.title')}>
