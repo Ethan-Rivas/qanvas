@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { GateKind } from '../circuit/gates';
-import { hasGateNoise, withoutNoise } from '../circuit/model';
+import { browserLimit, hasGateNoise, type Circuit } from '../circuit/model';
 import { useEditor } from '../editor/store';
 import { useT } from '../i18n/useT';
 import { detectLab } from '../lab/lab';
@@ -38,8 +38,12 @@ export function App() {
   const language = useEditor((s) => s.language);
   const circuit = useEditor((s) => s.circuit);
   const { result, pending } = useSimulation(circuit);
-  // A second worker simulates the circuit without its gate noise, for the comparison in the results.
-  const idealCircuit = useMemo(() => (hasGateNoise(circuit) ? withoutNoise(circuit) : null), [circuit]);
+  // A second worker simulates the circuit without its gate noise, for the comparison in the results. It depends
+  // only on the noiseless circuit, so dragging a noise slider doesn't rerun it.
+  const gateNoise = hasGateNoise(circuit);
+  const tooLarge = circuit.qubits > browserLimit(circuit);
+  const { qubits, columns } = circuit;
+  const idealCircuit = useMemo<Circuit | null>(() => (gateNoise && !tooLarge ? { qubits, columns } : null), [qubits, columns, gateNoise, tooLarge]);
   const { result: ideal } = useSimulation(idealCircuit);
   useShareLink();
   useEffect(() => {
