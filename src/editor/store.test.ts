@@ -1,7 +1,7 @@
 import { beforeEach, expect, it } from 'vitest';
 import { EMPTY_CIRCUIT, useEditor } from './store';
 
-beforeEach(() => useEditor.setState({ circuit: EMPTY_CIRCUIT, exampleId: null, past: [], future: [], selection: null, notice: null }));
+beforeEach(() => useEditor.setState({ circuit: EMPTY_CIRCUIT, exampleId: null, past: [], future: [], selection: null, notice: null, noiseEdit: null }));
 
 it('undoes and redoes edits, and selects the gate that was placed', () => {
   const { placeGate, undo, redo } = useEditor.getState();
@@ -32,4 +32,14 @@ it('makes a run of noise changes one undo step', () => {
   expect(useEditor.getState().circuit.noise?.oneQubit).toBe(0.003);
   undo();
   expect(useEditor.getState().circuit).toEqual({ qubits: 3, columns: [[{ gate: 'H', targets: [0] }]] });
+});
+
+it('starts a new noise run after an undo returns to the end of an earlier run', () => {
+  const { placeGate, setNoise, undo } = useEditor.getState();
+  setNoise({ oneQubit: 0.001, twoQubit: 0, readout: 0 });
+  placeGate('H', { column: 0, qubit: 0 });
+  undo();
+  setNoise({ oneQubit: 0.05, twoQubit: 0, readout: 0 });
+  undo();
+  expect(useEditor.getState().circuit).toEqual({ qubits: 3, columns: [], noise: { oneQubit: 0.001, twoQubit: 0, readout: 0 } });
 });

@@ -101,6 +101,7 @@ export const useEditor = create<EditorState>()((set, get) => {
       past: [...past, { circuit, exampleId }].slice(-HISTORY_LIMIT),
       future: [],
       notice: null,
+      noiseEdit: null,
       selection: result.at ?? (keepSelection ? get().selection : null),
     });
     return result.at ?? null;
@@ -131,6 +132,7 @@ export const useEditor = create<EditorState>()((set, get) => {
         future: [],
         selection: null,
         notice: null,
+        noiseEdit: null,
         step: null,
       });
       return true;
@@ -143,7 +145,7 @@ export const useEditor = create<EditorState>()((set, get) => {
       const { circuit, noiseEdit } = get();
       const result = edits.setNoise(circuit, noise);
       if (result.ok && circuit === noiseEdit && result.circuit !== circuit) {
-        set({ circuit: result.circuit, future: [], noiseEdit: result.circuit });
+        set({ circuit: result.circuit, future: [], notice: null, noiseEdit: result.circuit });
         return;
       }
       apply(result, true);
@@ -168,13 +170,13 @@ export const useEditor = create<EditorState>()((set, get) => {
     undo() {
       const { past, future, circuit, exampleId } = get();
       if (past.length === 0) return;
-      set({ ...past[past.length - 1], past: past.slice(0, -1), future: [{ circuit, exampleId }, ...future], selection: null, notice: null });
+      set({ ...past[past.length - 1], past: past.slice(0, -1), future: [{ circuit, exampleId }, ...future], selection: null, notice: null, noiseEdit: null });
     },
 
     redo() {
       const { past, future, circuit, exampleId } = get();
       if (future.length === 0) return;
-      set({ ...future[0], past: [...past, { circuit, exampleId }], future: future.slice(1), selection: null, notice: null });
+      set({ ...future[0], past: [...past, { circuit, exampleId }], future: future.slice(1), selection: null, notice: null, noiseEdit: null });
     },
 
     select: (selection) => set({ selection }),
