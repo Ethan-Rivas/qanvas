@@ -6,7 +6,7 @@ import { expect, test } from 'vitest';
 import { withoutNoise, type Circuit } from '../circuit/model';
 import { translator } from '../i18n/i18n';
 import { densityOf } from '../sim/analysis';
-import { finalState, probabilities, withReadout } from '../sim/simulator';
+import { finalState, reportedProbabilities } from '../sim/simulator';
 import { countedQubits, measuresAtEnd, notebook, PYTHON_FORMATS, pythonScript, SHOTS } from './download';
 import { CODE_FORMATS, codeText, generateCode } from './generate';
 import { importQasm } from './qasmImport';
@@ -74,7 +74,7 @@ test(`exported code runs in Python and matches Qanvas on ${cases.length} circuit
 
 /** Probabilities of each outcome over the counted qubits, keyed with q0 first like the downloads. */
 function outcomeProbabilities(circuit: Circuit): Map<string, number> {
-  const p = withReadout(probabilities(finalState(circuit)), circuit.qubits, circuit.noise?.readout ?? 0);
+  const p = reportedProbabilities(circuit);
   const counted = countedQubits(circuit);
   const result = new Map<string, number>();
   p.forEach((value, index) => {

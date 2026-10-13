@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { Circuit, Noise } from '../circuit/model';
 import { blochLength, blochVector, pureVector } from './analysis';
-import { finalState, isMixed, probabilities, simulate, withReadout } from './simulator';
+import { finalState, isMixed, probabilities, reportedProbabilities, simulate, withReadout } from './simulator';
 
 const probs = (circuit: Circuit) => [...probabilities(finalState(circuit))].map((p) => Math.round(p * 1e9) / 1e9);
 
@@ -81,4 +81,22 @@ it('applies readout error to what measuring reports, keeping the state vector wh
   const state = finalState({ qubits: 2, columns: [[{ gate: 'X', targets: [0] }]], noise: noise({ readout: 0.1 }) });
   expect(isMixed(state)).toBe(false);
   expect(round(withReadout(probabilities(state), 2, 0.1))).toEqual([0.09, 0.01, 0.81, 0.09]);
+});
+
+it('reports the recorded bit of a final measurement that a condition read', () => {
+  const circuit: Circuit = {
+    qubits: 2,
+    columns: [[{ gate: 'X', targets: [0] }], [{ gate: 'M', targets: [0] }], [{ gate: 'X', targets: [1], condition: { qubit: 0, value: 1 } }], [{ gate: 'M', targets: [1] }]],
+    noise: noise({ readout: 0.2 }),
+  };
+  expect(round(reportedProbabilities(circuit))).toEqual([0.16, 0.04, 0.16, 0.64]);
+});
+
+it('reports a fresh reading of the final state when no condition reads a final measurement', () => {
+  const circuit: Circuit = {
+    qubits: 2,
+    columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'M', targets: [0] }], [{ gate: 'X', targets: [1], condition: { qubit: 0, value: 1 } }], [{ gate: 'H', targets: [0] }]],
+    noise: noise({ oneQubit: 0.05, readout: 0.1 }),
+  };
+  expect(round(reportedProbabilities(circuit))).toEqual(round(withReadout(probabilities(finalState(circuit)), 2, 0.1)));
 });

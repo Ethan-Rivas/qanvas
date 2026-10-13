@@ -83,3 +83,20 @@ export function applySwap(state: Amplitudes, a: number, b: number) {
     [im[i], im[j]] = [im[j], im[i]];
   }
 }
+
+/** What measuring every qubit except `skip` reports when each reading comes out wrong with probability `readout`. */
+export function withReadout(p: Float64Array, qubits: number, readout: number, skip: ReadonlySet<number> = new Set()): Float64Array {
+  if (readout === 0) return p;
+  const reported = p.slice();
+  for (let q = 0; q < qubits; q++) {
+    if (skip.has(q)) continue;
+    const m = mask(q, qubits);
+    for (let i = 0; i < reported.length; i++) {
+      if (i & m) continue;
+      const [zero, one] = [reported[i], reported[i | m]];
+      reported[i] = (1 - readout) * zero + readout * one;
+      reported[i | m] = (1 - readout) * one + readout * zero;
+    }
+  }
+  return reported;
+}

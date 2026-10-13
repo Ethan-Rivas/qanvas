@@ -1,6 +1,8 @@
 import { usesDensity, validateCircuit, type Circuit, type Operation } from '../circuit/model';
-import { simulateDensity, type DensityMatrix } from './density';
-import { applySingle, applySwap, gateMatrix, mask } from './kernels';
+import { reportedDensityProbabilities, simulateDensity, type DensityMatrix } from './density';
+import { applySingle, applySwap, gateMatrix, withReadout } from './kernels';
+
+export { withReadout } from './kernels';
 
 export type { DensityMatrix } from './density';
 
@@ -98,18 +100,11 @@ export function probabilities(state: QuantumState): Float64Array {
   return p;
 }
 
-/** What measuring every qubit reports when each reading comes out wrong with probability `readout`. */
-export function withReadout(p: Float64Array, qubits: number, readout: number): Float64Array {
-  if (readout === 0) return p;
-  const reported = p.slice();
-  for (let q = 0; q < qubits; q++) {
-    const m = mask(q, qubits);
-    for (let i = 0; i < reported.length; i++) {
-      if (i & m) continue;
-      const [zero, one] = [reported[i], reported[i | m]];
-      reported[i] = (1 - readout) * zero + readout * one;
-      reported[i | m] = (1 - readout) * one + readout * zero;
-    }
-  }
-  return reported;
+/**
+ * What a run of the circuit reports when every qubit is read at the end, with the recorded bit for
+ * measurements that conditions read; the chart instead shows what measuring the final state would give.
+ */
+export function reportedProbabilities(circuit: Circuit): Float64Array {
+  if (usesDensity(circuit)) return reportedDensityProbabilities(circuit);
+  return withReadout(probabilities(finalState(circuit)), circuit.qubits, circuit.noise?.readout ?? 0);
 }

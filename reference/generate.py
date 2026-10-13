@@ -243,6 +243,7 @@ def fixed_noise_cases():
         noise_case("noisy Toffoli and SWAP", {"qubits": 3, "columns": [[gate("H", 0), gate("H", 1)], [{"gate": "X", "controls": [0, 1], "targets": [2]}], [gate("SWAP", 0, 2)]], "noise": noise(0.01, 0.08)}),
         noise_case("readout only", {"qubits": 2, "columns": [[gate("H", 0)], [cnot], [gate("M", 0, 1)]], "noise": noise(readout=0.2)}),
         noise_case("a misread measurement drives a condition", {"qubits": 2, "columns": [[gate("X", 0)], [gate("M", 0)], [gate("X", 1, **if_measured(0, 1))]], "noise": noise(readout=0.2)}),
+        noise_case("a misread measurement read again at the end", {"qubits": 2, "columns": [[gate("X", 0)], [gate("M", 0)], [gate("X", 1, **if_measured(0, 1))], [gate("M", 1)]], "noise": noise(readout=0.2)}),
         noise_case("two conditions read one measurement", {"qubits": 3, "columns": [[gate("H", 0)], [gate("M", 0)], [gate("X", 1, **if_measured(0, 1)), gate("X", 2, **if_measured(0, 1))]], "noise": noise(readout=0.1)}),
         noise_case("noise on a gate that may not run", {"qubits": 2, "columns": [[gate("X", 0)], [gate("M", 0)], [gate("X", 1, **if_measured(0, 0))]], "noise": noise(one=0.1)}),
         noise_case("reset with noise", {"qubits": 2, "columns": [[gate("H", 0)], [cnot], [gate("RESET", 0)], [gate("RY", 0, angle=0.9)]], "noise": noise(0.03, 0.04, 0.05)}),

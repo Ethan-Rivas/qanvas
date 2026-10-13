@@ -1,5 +1,5 @@
 import { DENSITY_QUBITS, gateError, operationQubits, partwayMeasurements, type Circuit, type Condition, type Noise, type Operation } from '../circuit/model';
-import { applySingle, applySwap, conjugate, gateMatrix, mask, type Amplitudes, type Matrix2 } from './kernels';
+import { applySingle, applySwap, conjugate, gateMatrix, mask, withReadout, type Amplitudes, type Matrix2 } from './kernels';
 
 /** ρ in Qanvas's index order (q0 is the most significant bit), row-major: entry (i, j) is at i·2ⁿ + j. */
 export interface DensityMatrix {
@@ -153,30 +153,20 @@ function applyGate(rho: DensityMatrix, op: Operation, noise: Noise | undefined) 
 }
 
 /**
- * Writes the density matrix before any column, then after each one, into `re` and `im` (step k at k·4ⁿ),
- * so a long circuit keeps a single copy of each snapshot. Snapshots show the state with misread parts merged.
+ * Runs the circuit on ρ, calling `afterColumn` after each column. Returns the final working ρ and the qubits
+ * whose last operation is a measurement a condition reads, still split into right and wrong readings (see `misread`).
  */
-export function simulateDensity(circuit: Circuit, re: Float64Array, im: Float64Array): void {
+function evolve(circuit: Circuit, afterColumn: (rho: DensityMatrix, split: Set<number>, column: number) => void = () => {}) {
   if (circuit.qubits > DENSITY_QUBITS) throw new Error(`The density-matrix simulator works with up to ${DENSITY_QUBITS} qubits`);
   const n = circuit.qubits;
-  const size = 1 << (2 * n);
   const partway = partwayMeasurements(circuit);
   const readout = circuit.noise?.readout ?? 0;
-  const rho: DensityMatrix = { qubits: n, re: new Float64Array(size), im: new Float64Array(size), mixed: true };
+  const rho: DensityMatrix = { qubits: n, re: new Float64Array(1 << (2 * n)), im: new Float64Array(1 << (2 * n)), mixed: true };
   rho.re[0] = 1;
-  const misreadQubits = new Set<number>();
-
-  const save = (step: number) => {
-    const snapshot: DensityMatrix = { qubits: n, re: re.subarray(step * size, (step + 1) * size), im: im.subarray(step * size, (step + 1) * size), mixed: true };
-    snapshot.re.set(rho.re);
-    snapshot.im.set(rho.im);
-    misreadQubits.forEach((q) => merge(snapshot, q));
-  };
-
-  save(0);
+  const split = new Set<number>();
   circuit.columns.forEach((column, c) => {
     for (const op of column) {
-      for (const q of operationQubits(op)) if (misreadQubits.delete(q)) merge(rho, q);
+      for (const q of operationQubits(op)) if (split.delete(q)) merge(rho, q);
       if (op.gate !== 'M') {
         applyGate(rho, op, circuit.noise);
         continue;
@@ -186,10 +176,46 @@ export function simulateDensity(circuit: Circuit, re: Float64Array, im: Float64A
         dephase(rho, q);
         if (readout > 0) {
           misread(rho, q, readout);
-          misreadQubits.add(q);
+          split.add(q);
         }
       }
     }
-    save(c + 1);
+    afterColumn(rho, split, c);
   });
+  return { rho, split };
+}
+
+/**
+ * Writes the density matrix before any column, then after each one, into `re` and `im` (step k at k·4ⁿ),
+ * so a long circuit keeps a single copy of each snapshot. Snapshots show the state with misread parts merged.
+ */
+export function simulateDensity(circuit: Circuit, re: Float64Array, im: Float64Array): void {
+  const size = 1 << (2 * circuit.qubits);
+  const save = (rho: DensityMatrix, split: Set<number>, step: number) => {
+    const snapshot: DensityMatrix = { qubits: rho.qubits, re: re.subarray(step * size, (step + 1) * size), im: im.subarray(step * size, (step + 1) * size), mixed: true };
+    snapshot.re.set(rho.re);
+    snapshot.im.set(rho.im);
+    split.forEach((q) => merge(snapshot, q));
+  };
+  re[0] = 1;
+  evolve(circuit, (rho, split, c) => save(rho, split, c + 1));
+}
+
+/**
+ * What a run reports when every qubit is read at the end: a qubit whose last operation is a measurement a
+ * condition reads reports that measurement's recorded bit, and every other qubit a fresh, possibly misread, reading.
+ */
+export function reportedDensityProbabilities(circuit: Circuit): Float64Array {
+  const { rho, split } = evolve(circuit);
+  const n = circuit.qubits;
+  const dim = 1 << n;
+  const recorded = [...split].reduce((acc, q) => acc | mask(q, n), 0);
+  const p = new Float64Array(dim);
+  for (let i = 0; i < dim; i++) {
+    for (let k = 0; k < dim; k++) {
+      if ((i ^ k) & ~recorded) continue;
+      p[k] += rho.re[i * dim + k];
+    }
+  }
+  return withReadout(p, n, circuit.noise?.readout ?? 0, split);
 }
