@@ -307,7 +307,7 @@ export const CircuitView = forwardRef<HTMLElement, { result: SimulationResult | 
             </span>
           )}
         </div>
-        <button type="button" className="button" aria-expanded={noiseOpen} aria-controls="noise-panel" onClick={() => setNoiseOpen(!noiseOpen)}>
+        <button type="button" className="button" aria-expanded={noiseOpen} aria-controls={noiseOpen ? 'noise-panel' : undefined} onClick={() => setNoiseOpen(!noiseOpen)}>
           {t('noise.button')}
         </button>
         <button type="button" className="button" onClick={addQubit} disabled={circuit.qubits >= limit}>
