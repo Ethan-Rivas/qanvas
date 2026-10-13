@@ -2,8 +2,8 @@ import { formatAngle } from '../circuit/angle';
 import { GATE_SYMBOL, kindOf, type GateKind } from '../circuit/gates';
 import type { Circuit, Operation } from '../circuit/model';
 import { pluralKey, type Language, type MessageKey, type Translate } from '../i18n/i18n';
-import { blochVector, formatState, isEntangled, sameState, sameUpToPhase } from '../sim/analysis';
-import type { StateVector } from '../sim/simulator';
+import { blochVector, formatState, isEntangled, pureVector, sameState, sameUpToPhase } from '../sim/analysis';
+import type { QuantumState, StateVector } from '../sim/simulator';
 
 export interface StepExplanation {
   label: string;
@@ -31,7 +31,7 @@ function groups(column: Operation[]): Operation[][] {
   const result: Operation[][] = [];
   for (const op of column) {
     const kind = kindOf(op);
-    const same = SINGLE_QUBIT.has(kind) && result.find((g) => kindOf(g[0]) === kind && g[0].angle === op.angle);
+    const same = SINGLE_QUBIT.has(kind) && !op.condition && result.find((g) => !g[0].condition && kindOf(g[0]) === kind && g[0].angle === op.angle);
     if (same) same.push(op);
     else result.push([op]);
   }
@@ -52,7 +52,8 @@ function describe(group: Operation[], t: Translate, language: Language): string 
     b: `q${op.targets[kind === 'CZ' ? 0 : 1]}`,
     angle: op.angle === undefined ? '' : formatAngle(op.angle),
   };
-  return t(`learn.${kind}.body` as MessageKey, values);
+  const body = t(`learn.${kind}.body` as MessageKey, values);
+  return op.condition ? `${body} ${t('learn.condition', { q: `q${op.condition.qubit}`, value: op.condition.value })}` : body;
 }
 
 function entanglementSentences(before: StateVector, after: StateVector, t: Translate, language: Language): string[] {
@@ -74,22 +75,26 @@ function entanglementSentences(before: StateVector, after: StateVector, t: Trans
 export function explainStep(
   circuit: Circuit,
   step: number,
-  before: StateVector,
-  after: StateVector,
+  before: QuantumState,
+  after: QuantumState,
   t: Translate,
   language: Language,
 ): StepExplanation {
   const column = circuit.columns[step - 1];
   const kinds = new Set(column.map(kindOf));
   const title = column.length === 1 ? t(`learn.${kindOf(column[0])}.title` as MessageKey) : t('learn.many.title', { count: column.length });
+  const was = pureVector(before);
+  const is = pureVector(after);
 
   const sentences = groups(column).map((group) => describe(group, t, language));
   // A measurement leaves the shown state as it is on purpose, so "nothing changed" would mislead.
-  if (!kinds.has('M') || kinds.size > 1) {
-    if (sameState(before, after)) sentences.push(t('learn.unchanged'));
-    else if (sameUpToPhase(before, after)) sentences.push(t('learn.globalPhase'));
-    else sentences.push(...entanglementSentences(before, after, t, language));
+  if (was && is && (!kinds.has('M') || kinds.size > 1)) {
+    if (sameState(was, is)) sentences.push(t('learn.unchanged'));
+    else if (sameUpToPhase(was, is)) sentences.push(t('learn.globalPhase'));
+    else sentences.push(...entanglementSentences(was, is, t, language));
   }
+  if (!is && kinds.has('M')) sentences.push(t('learn.measuredMix'));
 
-  return { label: columnLabel(column, t, language), title, sentences, before: formatState(before), after: formatState(after) };
+  const show = (state: StateVector | null) => (state ? formatState(state) : t('learn.mixed'));
+  return { label: columnLabel(column, t, language), title, sentences, before: show(was), after: show(is) };
 }

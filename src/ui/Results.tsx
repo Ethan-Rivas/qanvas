@@ -1,8 +1,8 @@
-import { BROWSER_QUBITS } from '../circuit/model';
+import { BROWSER_QUBITS, DENSITY_QUBITS, isDynamic } from '../circuit/model';
 import { currentStep, useEditor } from '../editor/store';
 import { formatPercent } from '../i18n/i18n';
 import { useT } from '../i18n/useT';
-import { blochVector, formatComplex } from '../sim/analysis';
+import { blochVector, formatComplex, pureVector } from '../sim/analysis';
 import { probabilities } from '../sim/simulator';
 import { stateAt, type SimulationResult } from '../sim/useSimulation';
 import { AerResults } from './AerResults';
@@ -59,12 +59,14 @@ export function Histogram({ items, vertical }: { items: { label: string; p: numb
 export function Results({ result, pending }: { result: SimulationResult | null; pending: boolean }) {
   const t = useT();
   const large = useEditor((s) => s.circuit.qubits > BROWSER_QUBITS);
+  const densityLimited = useEditor((s) => !large && isDynamic(s.circuit) && s.circuit.qubits > DENSITY_QUBITS);
   const language = useEditor((s) => s.language);
   const learnMode = useEditor((s) => s.learnMode);
   const step = useEditor(currentStep);
   const end = useEditor((s) => s.circuit.columns.length);
 
   const state = result && stateAt(result, step);
+  const vector = state && pureVector(state);
   const p = state ? probabilities(state) : new Float64Array();
   const qubits = state?.qubits ?? 0;
   const all = Array.from(p.keys());
@@ -74,6 +76,16 @@ export function Results({ result, pending }: { result: SimulationResult | null; 
   const subtitle = step === 0 ? t('results.atStart') : step >= end ? t('results.atEnd') : t('results.afterStep', { step });
 
   if (large) return <AerResults />;
+  if (densityLimited) {
+    return (
+      <aside className="results" aria-label={t('results.title')}>
+        <section className="results-section">
+          <h2>{t('results.title')}</h2>
+          <p className="results-note">{t('results.densityLimit', { max: DENSITY_QUBITS })}</p>
+        </section>
+      </aside>
+    );
+  }
 
   return (
     <aside className="results" aria-label={t('results.title')}>
@@ -90,30 +102,34 @@ export function Results({ result, pending }: { result: SimulationResult | null; 
               {bars.length < p.length && <> {t('results.topOutcomes', { shown: bars.length, total: p.length.toLocaleString(language) })}</>}
             </p>
 
-            <details className="amplitudes">
-              <summary>{t('results.amplitudes')}</summary>
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">{t('results.state')}</th>
-                    <th scope="col">{t('results.amplitude')}</th>
-                    <th scope="col">{t('results.probability')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((i) => (
-                    <tr key={i}>
-                      <th scope="row">|{ket(i, qubits)}⟩</th>
-                      <td>{formatComplex(state.re[i], state.im[i])}</td>
-                      <td>{formatPercent(language, p[i])}</td>
+            {vector ? (
+              <details className="amplitudes">
+                <summary>{t('results.amplitudes')}</summary>
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">{t('results.state')}</th>
+                      <th scope="col">{t('results.amplitude')}</th>
+                      <th scope="col">{t('results.probability')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              {rows.length < nonzero.length && (
-                <p className="results-note">{t('results.topAmplitudes', { shown: rows.length, total: nonzero.length.toLocaleString(language) })}</p>
-              )}
-            </details>
+                  </thead>
+                  <tbody>
+                    {rows.map((i) => (
+                      <tr key={i}>
+                        <th scope="row">|{ket(i, qubits)}⟩</th>
+                        <td>{formatComplex(vector.re[i], vector.im[i])}</td>
+                        <td>{formatPercent(language, p[i])}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {rows.length < nonzero.length && (
+                  <p className="results-note">{t('results.topAmplitudes', { shown: rows.length, total: nonzero.length.toLocaleString(language) })}</p>
+                )}
+              </details>
+            ) : (
+              <p className="results-note">{t('results.noAmplitudes')}</p>
+            )}
           </>
         )}
       </section>
@@ -121,10 +137,10 @@ export function Results({ result, pending }: { result: SimulationResult | null; 
       {state && (
         <section className="results-section results-bloch" aria-labelledby="bloch-title">
           <h2 id="bloch-title">{t('bloch.title')}</h2>
-          {learnMode && <p className="results-note">{t('bloch.hint')}</p>}
+          {learnMode && <p className="results-note">{t(vector ? 'bloch.hint' : 'bloch.hintMixed')}</p>}
           <ul className="bloch-grid">
             {Array.from({ length: qubits }, (_, q) => (
-              <BlochSphere key={q} qubit={q} bloch={blochVector(state, q)} t={t} />
+              <BlochSphere key={q} qubit={q} bloch={blochVector(state, q)} mixed={!vector} t={t} />
             ))}
           </ul>
         </section>

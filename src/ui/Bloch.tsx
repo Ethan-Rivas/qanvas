@@ -23,18 +23,18 @@ const AXIS_STATES: [keyof Bloch, number, string][] = [
   ['y', -1, '|−i⟩'],
 ];
 
-function status(bloch: Bloch, t: Translate): string {
-  if (isEntangled(bloch)) return t('bloch.entangled');
+function status(bloch: Bloch, mixed: boolean, t: Translate): string {
+  if (isEntangled(bloch)) return t(mixed ? 'bloch.mixed' : 'bloch.entangled');
   const axis = AXIS_STATES.find(([key, sign]) => Math.abs(bloch[key] - sign) < 1e-6);
   return axis ? axis[2] : t('bloch.notEntangled');
 }
 
 const fixed = (v: number) => (Math.abs(v) < 0.005 ? 0 : v).toFixed(2);
 
-export function BlochSphere({ qubit, bloch, t }: { qubit: number; bloch: Bloch; t: Translate }) {
+export function BlochSphere({ qubit, bloch, mixed, t }: { qubit: number; bloch: Bloch; mixed: boolean; t: Translate }) {
   const [tipX, tipY] = project(bloch);
   const length = blochLength(bloch);
-  const text = status(bloch, t);
+  const text = status(bloch, mixed, t);
   const description = t('bloch.description', {
     qubit: `q${qubit}`,
     status: text,

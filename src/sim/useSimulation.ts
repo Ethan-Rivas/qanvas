@@ -1,20 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { BROWSER_QUBITS, type Circuit } from '../circuit/model';
-import type { StateVector } from './simulator';
+import { BROWSER_QUBITS, DENSITY_QUBITS, isDynamic, type Circuit } from '../circuit/model';
+import type { QuantumState } from './simulator';
 import type { SimulationRequest, SimulationResponse } from './worker';
 
 /** Every step's state for `circuit`, which is kept so the states and the circuit always agree. */
 export interface SimulationResult {
   circuit: Circuit;
+  mixed: boolean;
   re: Float64Array;
   im: Float64Array;
 }
 
-export function stateAt(result: SimulationResult, step: number): StateVector {
+export function stateAt(result: SimulationResult, step: number): QuantumState {
   const { qubits } = result.circuit;
-  const size = 1 << qubits;
+  const size = result.mixed ? 1 << (2 * qubits) : 1 << qubits;
   const k = Math.min(step, result.circuit.columns.length);
-  return { qubits, re: result.re.subarray(k * size, (k + 1) * size), im: result.im.subarray(k * size, (k + 1) * size) };
+  const re = result.re.subarray(k * size, (k + 1) * size);
+  const im = result.im.subarray(k * size, (k + 1) * size);
+  return result.mixed ? { qubits, re, im, mixed: true } : { qubits, re, im };
 }
 
 /** Runs the simulator off the main thread and returns the latest result for `circuit`. */
@@ -35,7 +38,7 @@ export function useSimulation(circuit: Circuit): { result: SimulationResult | nu
         console.error(response.error);
         return;
       }
-      setResult({ circuit: latest.current.circuit, re: response.re, im: response.im });
+      setResult({ circuit: latest.current.circuit, mixed: response.mixed, re: response.re, im: response.im });
     };
     worker.current = w;
     return () => {
@@ -47,7 +50,7 @@ export function useSimulation(circuit: Circuit): { result: SimulationResult | nu
   useEffect(() => {
     latest.current = { id: latest.current.id + 1, circuit };
     // Every step's state of a larger circuit doesn't fit in the browser; quantum-lab runs those on Aer.
-    if (circuit.qubits > BROWSER_QUBITS) {
+    if (circuit.qubits > BROWSER_QUBITS || (isDynamic(circuit) && circuit.qubits > DENSITY_QUBITS)) {
       setResult(null);
       setPending(false);
       return;

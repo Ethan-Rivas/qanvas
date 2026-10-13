@@ -59,4 +59,22 @@ describe('step explanations', () => {
     expect(step.title).toBe('2 gates at once');
     expect(step.sentences[0]).toMatch(/^Sends q0 and q1 from \|0⟩/);
   });
+
+  it('explains a measurement partway through and a gate that depends on it', () => {
+    const circuit: Circuit = {
+      qubits: 2,
+      columns: [
+        [{ gate: 'H', targets: [0] }],
+        [{ gate: 'M', targets: [0] }],
+        [{ gate: 'X', targets: [1], condition: { qubit: 0, value: 1 } }],
+      ],
+    };
+    const states = simulate(circuit);
+    const first = explainStep(circuit, 1, states[0], states[1], t, 'en');
+    expect(first.after).toBe('(|00⟩ + |10⟩)/√2');
+    const measured = explainStep(circuit, 2, states[1], states[2], t, 'en');
+    expect(measured.after).toBe('a mix of outcomes');
+    expect(measured.sentences).toContain(t('learn.measuredMix'));
+    expect(explainStep(circuit, 3, states[2], states[3], t, 'en').sentences[0]).toContain('It only runs if q0 was measured as 1.');
+  });
 });
