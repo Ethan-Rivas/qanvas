@@ -428,8 +428,22 @@ test('explains a noisy, dynamic example step by step, with no accessibility issu
   await page.getByRole('button', { name: 'Noise', exact: true }).click();
   expect(describe((await new AxeBuilder({ page }).analyze()).violations)).toEqual([]);
 
+  await page.getByLabel('One-qubit gates').fill('1');
+  await page.getByLabel('Readout').fill('2');
+  await expect(page.getByText('each reading comes out wrong 2% of the time', { exact: false })).toBeVisible();
+  expect(describe((await new AxeBuilder({ page }).analyze()).violations)).toEqual([]);
+  await slider.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByText('each gate in this step has a 1% chance', { exact: false })).toBeVisible();
+  expect(describe((await new AxeBuilder({ page }).analyze()).violations)).toEqual([]);
+
   await page.getByRole('button', { name: 'Español' }).click();
+  await expect(page.getByText('cada compuerta de este paso tiene un 1 %', { exact: false })).toBeVisible();
+  expect(describe((await new AxeBuilder({ page }).analyze()).violations)).toEqual([]);
+  await page.getByRole('slider', { name: 'Recorre el circuito' }).focus();
+  await page.keyboard.press('ArrowLeft');
   await expect(page.getByText('q0 da 0 el 50', { exact: false })).toBeVisible();
+  await expect(page.getByText('cada lectura sale mal el 2 %', { exact: false })).toBeVisible();
   expect(describe((await new AxeBuilder({ page }).analyze()).violations)).toEqual([]);
 });
 
