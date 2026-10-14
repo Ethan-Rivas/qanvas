@@ -95,6 +95,22 @@ describe('step explanations', () => {
     ]);
   });
 
+  it('treats a reading as certain when its percentage would round to 0 or 100', () => {
+    const circuit: Circuit = { qubits: 1, columns: [[{ gate: 'RY', targets: [0], angle: 0.01 }], [{ gate: 'M', targets: [0] }]] };
+    expect(explain(circuit, 2).sentences.slice(1)).toEqual(['q0 reads 0 every time.']);
+  });
+
+  it('blames a noisy gate, not a final measurement, when the state first becomes a mix', () => {
+    const circuit: Circuit = {
+      qubits: 2,
+      columns: [[{ gate: 'X', targets: [0] }, { gate: 'M', targets: [1] }]],
+      noise: { oneQubit: 0.1, twoQubit: 0, readout: 0 },
+    };
+    const sentences = explain(circuit, 1).sentences;
+    expect(sentences).toContain(t('learn.noiseMix'));
+    expect(sentences).not.toContain(t('learn.measuredMix'));
+  });
+
   it('says how gate noise blurs the state, and when the state becomes a mix', () => {
     const circuit: Circuit = {
       qubits: 2,
@@ -104,13 +120,13 @@ describe('step explanations', () => {
     const first = explain(circuit, 1);
     expect(first.sentences).toEqual([
       t('learn.H.body', { q: 'q0' }),
-      'With noise on, each gate in this step has a 1% chance of leaving its qubits in a random state, so the Bloch arrows can shrink.',
+      'With noise on, each gate in this step has a 1% chance, each time it runs, of leaving its qubits in a random state, so the Bloch arrows can shrink.',
       t('learn.noiseMix'),
     ]);
     expect(first.after).toBe('a mixed state');
     expect(explain(circuit, 2).sentences).toEqual([
       'Flips q1 only when q0 is 1.',
-      'With noise on, each gate in this step has a 5% chance of leaving its qubits in a random state, so the Bloch arrows can shrink.',
+      'With noise on, each gate in this step has a 5% chance, each time it runs, of leaving its qubits in a random state, so the Bloch arrows can shrink.',
     ]);
   });
 });

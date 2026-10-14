@@ -78,7 +78,7 @@ function chanceSentences(column: Operation[], before: QuantumState, readout: num
     .map((q) => {
       const one = (1 - blochVector(before, q).z) / 2;
       const readsOne = one * (1 - readout) + (1 - one) * readout;
-      if (readsOne < 1e-9 || readsOne > 1 - 1e-9) return t('learn.chancesCertain', { q: `q${q}`, value: readsOne < 0.5 ? 0 : 1 });
+      if (readsOne < 0.0005 || readsOne > 0.9995) return t('learn.chancesCertain', { q: `q${q}`, value: readsOne < 0.5 ? 0 : 1 });
       return t('learn.chances', { q: `q${q}`, p0: formatPercent(language, 1 - readsOne), p1: formatPercent(language, readsOne) });
     });
 }
@@ -132,8 +132,12 @@ export function explainStep(
     else if (sameUpToPhase(was, is)) sentences.push(t('learn.globalPhase'));
     else sentences.push(...entanglementSentences(was, is, t, language));
   }
-  if (was && !is && kinds.has('M')) sentences.push(t('learn.measuredMix'));
-  else if (was && !is && !kinds.has('RESET')) sentences.push(t('learn.noiseMix'));
+  if (was && !is) {
+    const partway = partwayMeasurements(circuit);
+    const measuredPartway = column.some((op) => op.gate === 'M' && op.targets.some((q) => partway.has(`${step - 1}:${q}`)));
+    if (measuredPartway) sentences.push(t('learn.measuredMix'));
+    else if (!kinds.has('RESET')) sentences.push(t('learn.noiseMix'));
+  }
 
   const show = (state: StateVector | null) => (state ? formatState(state) : t('learn.mixed'));
   return { label: columnLabel(column, t, language), title, sentences, before: show(was), after: show(is) };
