@@ -60,15 +60,31 @@ export function applySingle(state: Amplitudes, m: Matrix2, target: number, contr
   const cMask = controls.reduce((acc, q) => acc | mask(q, qubits), 0);
   const [ar, br, cr, dr] = m.re;
   const [ai, bi, ci, di] = m.im;
+  const real = ai === 0 && bi === 0 && ci === 0 && di === 0;
+  const flip = real && ar === 0 && br === 1 && cr === 1 && dr === 0;
 
-  for (let i = 0; i < re.length; i++) {
-    if (i & t || (i & cMask) !== cMask) continue;
-    const j = i | t;
-    const r0 = re[i], i0 = im[i], r1 = re[j], i1 = im[j];
-    re[i] = ar * r0 - ai * i0 + br * r1 - bi * i1;
-    im[i] = ar * i0 + ai * r0 + br * i1 + bi * r1;
-    re[j] = cr * r0 - ci * i0 + dr * r1 - di * i1;
-    im[j] = cr * i0 + ci * r0 + dr * i1 + di * r1;
+  for (let base = 0; base < re.length; base += 2 * t) {
+    for (let i = base; i < base + t; i++) {
+      if ((i & cMask) !== cMask) continue;
+      const j = i | t;
+      const r0 = re[i], i0 = im[i], r1 = re[j], i1 = im[j];
+      if (flip) {
+        re[i] = r1;
+        im[i] = i1;
+        re[j] = r0;
+        im[j] = i0;
+      } else if (real) {
+        re[i] = ar * r0 + br * r1;
+        im[i] = ar * i0 + br * i1;
+        re[j] = cr * r0 + dr * r1;
+        im[j] = cr * i0 + dr * i1;
+      } else {
+        re[i] = ar * r0 - ai * i0 + br * r1 - bi * i1;
+        im[i] = ar * i0 + ai * r0 + br * i1 + bi * r1;
+        re[j] = cr * r0 - ci * i0 + dr * r1 - di * i1;
+        im[j] = cr * i0 + ci * r0 + dr * i1 + di * r1;
+      }
+    }
   }
 }
 

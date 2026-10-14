@@ -102,10 +102,37 @@ function reset(rho: DensityMatrix, qubit: number) {
 function depolarize(rho: DensityMatrix, qubits: number[], p: number, condition?: Condition) {
   const n = rho.qubits;
   const dim = 1 << n;
+  const { re, im } = rho;
   const offsets = Array.from({ length: 1 << qubits.length }, (_, s) => qubits.reduce((acc, q, b) => ((s >> b) & 1 ? acc | mask(q, n) : acc), 0));
   const touched = offsets[offsets.length - 1];
   const read = condition ? mask(condition.qubit, n) : 0;
   const share = p / offsets.length;
+  const keep = 1 - p;
+  if (qubits.length === 1) {
+    const m = touched;
+    for (let i = 0; i < dim; i++) {
+      if (i & m) continue;
+      for (let j = 0; j < dim; j++) {
+        if (j & m) continue;
+        if (condition && ((j & read) !== 0) !== (condition.value === 1)) continue;
+        const a = i * dim + j;
+        const b = a | m;
+        const c = (i | m) * dim + j;
+        const d = c | m;
+        const traceRe = re[a] + re[d];
+        const traceIm = im[a] + im[d];
+        re[a] = keep * re[a] + share * traceRe;
+        im[a] = keep * im[a] + share * traceIm;
+        re[d] = keep * re[d] + share * traceRe;
+        im[d] = keep * im[d] + share * traceIm;
+        re[b] *= keep;
+        im[b] *= keep;
+        re[c] *= keep;
+        im[c] *= keep;
+      }
+    }
+    return;
+  }
   for (let i = 0; i < dim; i++) {
     if (i & touched) continue;
     for (let j = 0; j < dim; j++) {
@@ -113,15 +140,17 @@ function depolarize(rho: DensityMatrix, qubits: number[], p: number, condition?:
       if (condition && ((j & read) !== 0) !== (condition.value === 1)) continue;
       let traceRe = 0;
       let traceIm = 0;
-      for (const o of offsets) {
-        traceRe += rho.re[(i | o) * dim + (j | o)];
-        traceIm += rho.im[(i | o) * dim + (j | o)];
+      for (let k = 0; k < offsets.length; k++) {
+        const at = (i | offsets[k]) * dim + (j | offsets[k]);
+        traceRe += re[at];
+        traceIm += im[at];
       }
-      for (const a of offsets) {
-        for (const b of offsets) {
-          const at = (i | a) * dim + (j | b);
-          rho.re[at] = (1 - p) * rho.re[at] + (a === b ? share * traceRe : 0);
-          rho.im[at] = (1 - p) * rho.im[at] + (a === b ? share * traceIm : 0);
+      for (let ka = 0; ka < offsets.length; ka++) {
+        const row = (i | offsets[ka]) * dim;
+        for (let kb = 0; kb < offsets.length; kb++) {
+          const at = row + (j | offsets[kb]);
+          re[at] = keep * re[at] + (ka === kb ? share * traceRe : 0);
+          im[at] = keep * im[at] + (ka === kb ? share * traceIm : 0);
         }
       }
     }
