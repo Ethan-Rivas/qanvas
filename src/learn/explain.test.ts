@@ -79,8 +79,19 @@ describe('step explanations', () => {
     const first = explainStep(circuit, 1, states[0], states[1], t, 'en');
     expect(first.after).toBe('(|00⟩ + |10⟩)/√2');
     const measured = explainStep(circuit, 2, states[1], states[2], t, 'en');
-    expect(measured.after).toBe('a mix of outcomes');
+    expect(measured.after).toBe('a mixed state');
     expect(measured.sentences).toContain(t('learn.measuredMix'));
     expect(explainStep(circuit, 3, states[2], states[3], t, 'en').sentences[0]).toContain('It only runs if q0 was measured as 1.');
+  });
+
+  it('gives the chances of each reading at a measurement, readout errors included', () => {
+    const circuit: Circuit = { qubits: 2, columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'M', targets: [0, 1] }]] };
+    expect(explain(circuit, 2).sentences.slice(1)).toEqual(['q0 reads 0 50% of the time and 1 50% of the time.', 'q1 reads 0 every time.']);
+    const noisy: Circuit = { ...circuit, noise: { oneQubit: 0, twoQubit: 0, readout: 0.1 } };
+    expect(explain(noisy, 2).sentences.slice(1)).toEqual([
+      'q0 reads 0 50% of the time and 1 50% of the time.',
+      'q1 reads 0 90% of the time and 1 10% of the time.',
+      'These chances include readout errors: each reading comes out wrong 10% of the time.',
+    ]);
   });
 });

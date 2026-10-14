@@ -1,7 +1,7 @@
 import { formatAngle } from '../circuit/angle';
 import { GATE_SYMBOL, kindOf, type GateKind } from '../circuit/gates';
 import { gateError, partwayMeasurements, type Circuit, type Operation } from '../circuit/model';
-import { pluralKey, type Language, type MessageKey, type Translate } from '../i18n/i18n';
+import { formatPercent, pluralKey, type Language, type MessageKey, type Translate } from '../i18n/i18n';
 import { blochVector, formatState, isEntangled, pureVector, sameState, sameUpToPhase } from '../sim/analysis';
 import { isMixed, simulate, type QuantumState, type StateVector } from '../sim/simulator';
 
@@ -71,6 +71,18 @@ function entanglementSentences(before: StateVector, after: StateVector, t: Trans
   return sentences;
 }
 
+function chanceSentences(column: Operation[], before: QuantumState, readout: number, t: Translate, language: Language): string[] {
+  return column
+    .filter((op) => op.gate === 'M')
+    .flatMap((op) => op.targets)
+    .map((q) => {
+      const one = (1 - blochVector(before, q).z) / 2;
+      const readsOne = one * (1 - readout) + (1 - one) * readout;
+      if (readsOne < 1e-9 || readsOne > 1 - 1e-9) return t('learn.chancesCertain', { q: `q${q}`, value: readsOne < 0.5 ? 0 : 1 });
+      return t('learn.chances', { q: `q${q}`, p0: formatPercent(language, 1 - readsOne), p1: formatPercent(language, readsOne) });
+    });
+}
+
 /** How many columns at the start keep the state pure: none resets, measures partway through or adds gate noise. */
 function pureColumnCount(circuit: Circuit): number {
   const partway = partwayMeasurements(circuit);
@@ -102,6 +114,9 @@ export function explainStep(
   const is = pureVector(after);
 
   const sentences = groups(column).map((group) => describe(group, t, language));
+  const readout = circuit.noise?.readout ?? 0;
+  sentences.push(...chanceSentences(column, before, readout, t, language));
+  if (kinds.has('M') && readout > 0) sentences.push(t('learn.readoutNoise', { percent: formatPercent(language, readout) }));
   // A measurement leaves the shown state as it is on purpose, so "nothing changed" would mislead.
   if (was && is && (!kinds.has('M') || kinds.size > 1)) {
     if (sameState(was, is)) sentences.push(t('learn.unchanged'));
