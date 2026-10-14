@@ -6,7 +6,7 @@ Copy this list into the release's tracking issue and tick each item. A release i
 
 - [ ] **Types and unit tests:** `npm run typecheck` and `npm test`, including every Qiskit reference circuit within 1e-9 and the 12-qubit, 50-column performance check.
 - [ ] **Qiskit references:** the "Qiskit references" workflow regenerates the reference states with the quantum-lab image and the simulator still matches them.
-- [ ] **Exported code:** `npm run test:export` runs the Qiskit, Cirq, pyQuil and OpenQASM code for every reference circuit and imports Qiskit's own OpenQASM; all final states match within 1e-9.
+- [ ] **Exported code:** `npm run test:export` runs the Qiskit, Cirq, pyQuil and OpenQASM code for every reference circuit and imports Qiskit's own OpenQASM; state-vector circuits match state by state within 1e-9, while circuits with noise or a measurement partway through are checked by importing their OpenQASM as a density matrix and by sampling counts.
 - [ ] **Browser tests:** `npm run test:e2e`, covering dragging, keyboard-only drag and drop, step-through, code copy, examples, share links, OpenQASM import, offline use, phone width, Spanish and automated accessibility checks on the main screen and every dialog.
 - [ ] **Server image:** the `server-image` CI job builds the `Dockerfile`.
 

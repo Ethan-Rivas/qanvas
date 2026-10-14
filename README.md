@@ -41,7 +41,7 @@ In [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab), `docker compose up
 - **Run with Qiskit Aer** runs circuits of 13 to 24 qubits, which are too large for the browser, and shows the counts.
 - **Edit Qiskit, Cirq and pyQuil code**: the lab runs your code, loops included, and the diagram shows the circuit it builds. Your code stays as you wrote it until you change the diagram. [docs/quantum-lab.md](docs/quantum-lab.md) describes how it's set up there.
 
-Noisy circuits, and circuits that measure partway through, run in the browser up to 8 qubits. Above that they will run on Aer once quantum-lab supports it ([the spec](docs/superpowers/specs/2026-10-13-lab-run-noise.md)).
+Circuits with gate noise, a measurement partway through or a reset run in the browser up to 8 qubits (noise on readings alone runs up to 12). Above that they will run on Aer once quantum-lab supports it ([the spec](docs/superpowers/specs/2026-10-13-lab-run-noise.md)).
 
 To run only Qanvas with Docker:
 
@@ -67,7 +67,7 @@ Then open **http://localhost:5173**. Offline mode only works in a built copy: `n
 Every result Qanvas shows is checked against Qiskit, so you can trust it.
 
 - **Simulator:** `reference/generate.py` builds test circuits in Qiskit (every gate on each qubit position, every example, and 200 random circuits from 1 to 12 qubits) and saves their exact final states. Qanvas must match every amplitude within 1e-9. Circuits with noise or a measurement partway through are compared with Qiskit's `DensityMatrix`, using Aer's noise channels. The script runs in the quantum-lab image (`npm run reference`); the reference files are never edited by hand.
-- **Exported code:** `npm run test:export` runs the Qiskit, Cirq, pyQuil and OpenQASM code Qanvas generates for every test circuit, and imports the OpenQASM that Qiskit writes. Every final state must match Qanvas's. This is what catches bit-order mistakes. It also runs the downloadable notebooks and scripts, whose counts must agree with Qanvas's probabilities. Exported code with noise is run many times and its counts are checked against Qanvas's exact probabilities.
+- **Exported code:** `npm run test:export` runs the Qiskit, Cirq, pyQuil and OpenQASM code Qanvas generates for every test circuit, and imports the OpenQASM that Qiskit writes. For circuits that stay a state vector, every final state must match Qanvas's within 1e-9. Circuits with noise or a measurement partway through are checked by importing their OpenQASM as a density matrix and by sampling counts. This is what catches bit-order mistakes. It also runs the downloadable notebooks and scripts, whose counts must agree with Qanvas's probabilities. Exported code with noise is run many times and its counts are checked against Qanvas's exact probabilities.
 - **Interface:** browser tests cover dragging with the mouse and the keyboard, stepping through, sharing, importing, offline use, phone screens and automated accessibility checks.
 
 ## Development

@@ -41,7 +41,7 @@ En [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab/blob/main/README.es.
 - **Correr con Qiskit Aer** corre circuitos de 13 a 24 qubits, demasiado grandes para el navegador, y muestra los conteos.
 - **Editar código de Qiskit, Cirq y pyQuil**: el laboratorio corre tu código, con todo y ciclos, y el diagrama muestra el circuito que arma. Tu código se queda como lo escribiste hasta que cambias el diagrama. [docs/quantum-lab.md](docs/quantum-lab.md) explica cómo está configurado allá (en inglés).
 
-Los circuitos con ruido, o que miden a la mitad, corren en el navegador hasta con 8 qubits. Con más, correrán en Aer cuando quantum-lab lo permita ([la especificación](docs/superpowers/specs/2026-10-13-lab-run-noise.md), en inglés).
+Los circuitos con ruido en las compuertas, con una medición a la mitad o con un reinicio corren en el navegador hasta con 8 qubits (el ruido solo en las lecturas llega hasta 12). Con más, correrán en Aer cuando quantum-lab lo permita ([la especificación](docs/superpowers/specs/2026-10-13-lab-run-noise.md), en inglés).
 
 Para correr solo Qanvas con Docker:
 
@@ -67,7 +67,7 @@ Luego abre **http://localhost:5173**. El modo sin internet solo funciona en una 
 Cada resultado que muestra Qanvas se compara con Qiskit, para que puedas confiar en él.
 
 - **Simulador:** `reference/generate.py` arma circuitos de prueba en Qiskit (cada compuerta en cada posición de qubit, cada ejemplo y 200 circuitos aleatorios de 1 a 12 qubits) y guarda sus estados finales exactos. Qanvas debe coincidir en cada amplitud con un margen de 1e-9. Los circuitos con ruido o con una medición a la mitad se comparan con el `DensityMatrix` de Qiskit, usando los canales de ruido de Aer. El script corre en la imagen de quantum-lab (`npm run reference`); los archivos de referencia nunca se editan a mano.
-- **Código exportado:** `npm run test:export` corre el código de Qiskit, Cirq, pyQuil y OpenQASM que genera Qanvas para cada circuito de prueba, e importa el OpenQASM que escribe Qiskit. Cada estado final debe coincidir con el de Qanvas. Así se detectan los errores de orden de bits. También corre los notebooks y scripts que se pueden descargar, cuyos conteos deben coincidir con las probabilidades de Qanvas. El código exportado con ruido se corre muchas veces y sus conteos se comparan con las probabilidades exactas de Qanvas.
+- **Código exportado:** `npm run test:export` corre el código de Qiskit, Cirq, pyQuil y OpenQASM que genera Qanvas para cada circuito de prueba, e importa el OpenQASM que escribe Qiskit. En los circuitos que siguen siendo un vector de estado, cada estado final debe coincidir con el de Qanvas con un margen de 1e-9. Los circuitos con ruido o con una medición a la mitad se revisan importando su OpenQASM como matriz de densidad y muestreando conteos. Así se detectan los errores de orden de bits. También corre los notebooks y scripts que se pueden descargar, cuyos conteos deben coincidir con las probabilidades de Qanvas. El código exportado con ruido se corre muchas veces y sus conteos se comparan con las probabilidades exactas de Qanvas.
 - **Interfaz:** las pruebas en el navegador cubren arrastrar con el mouse y con el teclado, el recorrido paso a paso, compartir, importar, el uso sin internet, pantallas de celular y revisiones automáticas de accesibilidad.
 
 ## Desarrollo
