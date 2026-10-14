@@ -176,7 +176,7 @@ test('imports OpenQASM and Quirk links and explains what it cannot read', async 
 
 test('downloads the circuit as a notebook, a script or OpenQASM', async ({ page }) => {
   await page.getByRole('button', { name: 'Examples' }).click();
-  await page.getByRole('button', { name: /^Bell state/ }).click();
+  await page.getByRole('button', { name: /^Bell state Two/ }).click();
   await page.getByRole('tab', { name: 'Cirq' }).click();
   await page.getByRole('button', { name: 'Download', exact: true }).click();
   await expect(page.getByRole('radio', { name: 'Cirq' })).toBeChecked();
@@ -212,7 +212,7 @@ test('opens the circuit as a notebook in JupyterLab when running in quantum-lab'
   });
   await page.reload();
   await page.getByRole('button', { name: 'Examples' }).click();
-  await page.getByRole('button', { name: /^Bell state/ }).click();
+  await page.getByRole('button', { name: /^Bell state Two/ }).click();
   await page.getByRole('button', { name: 'Download', exact: true }).click();
 
   const [jupyter] = await Promise.all([context.waitForEvent('page'), page.getByRole('button', { name: 'Open in notebook' }).click()]);
@@ -310,6 +310,8 @@ test('switches the interface to Spanish', async ({ page }) => {
 test('fits a phone screen without sideways scrolling', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   for (let i = 0; i < 3; i++) await page.getByRole('button', { name: /Add qubit/ }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.getByRole('button', { name: 'Noise', exact: true }).click();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
@@ -411,4 +413,32 @@ test('sends noisy circuits above 8 qubits to Qiskit Aer when the lab can add the
   await page.getByRole('button', { name: 'Run with Qiskit Aer' }).click();
   await expect(outcome(page, '|100000000⟩: 100%')).toBeVisible();
   expect(sent).toMatchObject({ noise: { oneQubit: 0.01, twoQubit: 0, readout: 0 }, measured: [0, 1, 2, 3, 4, 5, 6, 7, 8] });
+});
+
+test('explains a noisy, dynamic example step by step, with no accessibility issues in English or Spanish', async ({ page }) => {
+  const describe = (violations: { id: string; nodes: { target: unknown }[] }[]) => violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`);
+  await page.getByRole('button', { name: 'Examples' }).click();
+  await page.getByRole('button', { name: /^Quantum teleportation/ }).click();
+  const slider = page.getByRole('slider', { name: 'Step through the circuit' });
+  await slider.focus();
+  await page.keyboard.press('Home');
+  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
+  await expect(page.getByText('q0 reads 0 50% of the time and 1 50% of the time.', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Noise', exact: true }).click();
+  expect(describe((await new AxeBuilder({ page }).analyze()).violations)).toEqual([]);
+
+  await page.getByRole('button', { name: 'Español' }).click();
+  await expect(page.getByText('q0 da 0 el 50', { exact: false })).toBeVisible();
+  expect(describe((await new AxeBuilder({ page }).analyze()).violations)).toEqual([]);
+});
+
+test('makes a gate conditional with the keyboard only', async ({ page }) => {
+  await openCircuit(page, { qubits: 2, columns: [[{ gate: 'X', targets: [0] }], [{ gate: 'M', targets: [0] }], [{ gate: 'X', targets: [1] }]] });
+  await page.getByRole('button', { name: /^Pauli-X on q1, step 3/ }).focus();
+  await page.keyboard.press('Enter');
+  const runs = page.getByLabel('Runs');
+  for (let i = 0; i < 10 && !(await runs.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press('Tab');
+  await expect(runs).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(outcome(page, '|11⟩: 100%')).toBeVisible();
 });
