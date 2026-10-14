@@ -393,9 +393,16 @@ def single_gate_cases():
     return cases
 
 
+def is_dynamic(circuit):
+    # Mirrors isDynamic in src/circuit/model.ts.
+    ops = [op for column in circuit["columns"] for op in column]
+    return any(op["gate"] == "RESET" for op in ops) or bool(partway_measurements(circuit))
+
+
 def example_cases():
     examples = json.loads(EXAMPLES.read_text())
-    return [case(name, circuit) for name, circuit in examples.items()]
+    build = lambda circuit: noise_case if "noise" in circuit else density_case if is_dynamic(circuit) else case
+    return [build(circuit)(name, circuit) for name, circuit in examples.items()]
 
 
 def random_op(rng, free):

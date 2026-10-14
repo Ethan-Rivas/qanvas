@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { expect, test } from 'vitest';
-import { withoutNoise, type Circuit } from '../circuit/model';
+import { hasNoise, usesDensity, withoutNoise, type Circuit } from '../circuit/model';
 import { translator } from '../i18n/i18n';
 import { densityOf } from '../sim/analysis';
 import { finalState, reportedProbabilities } from '../sim/simulator';
@@ -25,6 +25,7 @@ type Result = { re: number[]; im: number[] } | { error: string };
 const cases: Case[] = ['single-gate', 'examples', 'random'].flatMap((file) =>
   JSON.parse(readFileSync(join(ROOT, 'reference/data', `${file}.json`), 'utf8')),
 );
+const stateCases = cases.filter(({ circuit }) => !usesDensity(circuit) && !hasNoise(circuit));
 
 function runInLab(script: string, input: unknown): unknown {
   const work = mkdtempSync(join(tmpdir(), 'qanvas-export-'));
@@ -37,9 +38,9 @@ function runInLab(script: string, input: unknown): unknown {
   return JSON.parse(readFileSync(join(work, 'results.json'), 'utf8'));
 }
 
-test(`exported code runs in Python and matches Qanvas on ${cases.length} circuits`, () => {
+test(`exported code runs in Python and matches Qanvas on ${stateCases.length} circuits`, () => {
   const t = translator('en');
-  const input = cases.map(({ name, circuit }) => ({
+  const input = stateCases.map(({ name, circuit }) => ({
     name,
     qubits: circuit.qubits,
     code: Object.fromEntries(CODE_FORMATS.map((format) => [format, codeText(generateCode(format, circuit, t))])),
@@ -47,7 +48,7 @@ test(`exported code runs in Python and matches Qanvas on ${cases.length} circuit
   const output = runInLab('scripts/run_exports.py', input) as { name: string; results: Record<string, Result>; qiskitQasm: string }[];
   const failures: string[] = [];
   output.forEach(({ name, results, qiskitQasm }, i) => {
-    const expected = finalState(cases[i].circuit);
+    const expected = finalState(stateCases[i].circuit);
     const imported = importQasm(qiskitQasm);
     if (!imported.ok) failures.push(`${name} [import from Qiskit]: ${JSON.stringify(imported.error)}`);
     else {

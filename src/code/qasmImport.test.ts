@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { sameCircuit, type Circuit } from '../circuit/model';
+import { sameCircuit, withoutNoise, type Circuit } from '../circuit/model';
 import { translator } from '../i18n/i18n';
 import { densityOf } from '../sim/analysis';
 import { finalState } from '../sim/simulator';
@@ -18,7 +18,7 @@ describe('OpenQASM import', () => {
     const failures = cases.filter(({ circuit }) => {
       const result = importQasm(codeText(generateCode('qasm', circuit, t)));
       if (!result.ok) return true;
-      const a = finalState(circuit);
+      const a = finalState(withoutNoise(circuit));
       const b = finalState(result.circuit);
       return a.re.some((re, i) => Math.hypot(re - b.re[i], a.im[i] - b.im[i]) > 1e-9);
     });

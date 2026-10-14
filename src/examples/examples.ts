@@ -1,7 +1,7 @@
 import { sameCircuit, type Circuit } from '../circuit/model';
 import circuits from './circuits.json';
 
-export const EXAMPLE_IDS = ['bell', 'ghz', 'superdense-coding', 'teleportation', 'deutsch-jozsa', 'grover-2'] as const;
+export const EXAMPLE_IDS = ['bell', 'ghz', 'superdense-coding', 'teleportation', 'bit-flip-code', 'noisy-bell', 'deutsch-jozsa', 'grover-2'] as const;
 
 export type ExampleId = (typeof EXAMPLE_IDS)[number];
 

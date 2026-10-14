@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Circuit } from '../circuit/model';
 import { EXAMPLES } from '../examples/examples';
 import { decodeLink, encodeLink, fromFile, toFile } from './share';
 
@@ -23,7 +24,19 @@ describe('sharing', () => {
   it('still opens links made before 0.3', async () => {
     const link =
       '#c=ndCxCsIwFAXQf7nzQxrd8gVdXJzUkCGWEAJpUtNXKJT8uwRBbYcOzu9w7-Ut6HzuJs-QC57Tw_MIeSJ0KUx9HCGVWuAMW0hcbiCwyc5WpBpNMNEFCykOotDHtSsmdNH0DbmihkfOKbyvv_a4axu9k9tutv1det8r3djzupQEVaALwc6mH-prwDbYIWU27FNEeQE';
-    expect(await decodeLink(link)).toEqual({ circuit: EXAMPLES.teleportation, exampleId: 'teleportation' });
+    const before03: Circuit = {
+      qubits: 3,
+      columns: [
+        [{ gate: 'RY', targets: [0], angle: 1.1 }, { gate: 'H', targets: [1] }],
+        [{ gate: 'X', controls: [1], targets: [2] }],
+        [{ gate: 'X', controls: [0], targets: [1] }],
+        [{ gate: 'H', targets: [0] }],
+        [{ gate: 'X', controls: [1], targets: [2] }],
+        [{ gate: 'Z', controls: [0], targets: [2] }],
+        [{ gate: 'M', targets: [0, 1, 2] }],
+      ],
+    };
+    expect(await decodeLink(link)).toEqual({ circuit: before03, exampleId: 'teleportation' });
   });
   it('keeps noise in links and files, and rejects noise outside the limits', async () => {
     const noisy = { ...EXAMPLES.bell, noise: { oneQubit: 0.005, twoQubit: 0.01, readout: 0.02 } };
