@@ -112,7 +112,8 @@ test('downloaded scripts and notebooks run and their counts agree with Qanvas', 
 
   const failures: string[] = [];
   output.forEach(({ name, results }, i) => {
-    const expected = outcomeProbabilities(scriptCases[i].circuit);
+    const withNoise = outcomeProbabilities(scriptCases[i].circuit);
+    const withoutNoiseExpected = outcomeProbabilities(withoutNoise(scriptCases[i].circuit));
     const expectedRuns = 3 * (notebookCases.has(name) ? 2 : 1);
     if (Object.keys(results).length !== expectedRuns) failures.push(`${name}: ${Object.keys(results).length} runs instead of ${expectedRuns}`);
     for (const [run, result] of Object.entries(results)) {
@@ -120,7 +121,7 @@ test('downloaded scripts and notebooks run and their counts agree with Qanvas', 
         failures.push(`${name} [${run}]: ${result.error}`);
         continue;
       }
-      failures.push(...countFailures(`${name} [${run}]`, result.counts, expected));
+      failures.push(...countFailures(`${name} [${run}]`, result.counts, run.startsWith('pyquil') ? withoutNoiseExpected : withNoise));
     }
   });
   expect(failures).toEqual([]);
