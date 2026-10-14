@@ -94,4 +94,23 @@ describe('step explanations', () => {
       'These chances include readout errors: each reading comes out wrong 10% of the time.',
     ]);
   });
+
+  it('says how gate noise blurs the state, and when the state becomes a mix', () => {
+    const circuit: Circuit = {
+      qubits: 2,
+      columns: [[{ gate: 'H', targets: [0] }], [{ gate: 'X', controls: [0], targets: [1] }]],
+      noise: { oneQubit: 0.01, twoQubit: 0.05, readout: 0 },
+    };
+    const first = explain(circuit, 1);
+    expect(first.sentences).toEqual([
+      t('learn.H.body', { q: 'q0' }),
+      'With noise on, each gate in this step has a 1% chance of leaving its qubits in a random state, so the Bloch arrows can shrink.',
+      t('learn.noiseMix'),
+    ]);
+    expect(first.after).toBe('a mixed state');
+    expect(explain(circuit, 2).sentences).toEqual([
+      'Flips q1 only when q0 is 1.',
+      'With noise on, each gate in this step has a 5% chance of leaving its qubits in a random state, so the Bloch arrows can shrink.',
+    ]);
+  });
 });

@@ -83,6 +83,13 @@ function chanceSentences(column: Operation[], before: QuantumState, readout: num
     });
 }
 
+function gateNoiseSentence(column: Operation[], circuit: Circuit, t: Translate, language: Language): string | null {
+  const rates = [...new Set(column.map((op) => gateError(op, circuit.noise)).filter((p) => p > 0))].sort((a, b) => a - b);
+  if (rates.length === 0) return null;
+  const percent = new Intl.ListFormat(language, { type: 'disjunction' }).format(rates.map((p) => formatPercent(language, p)));
+  return t('learn.gateNoise', { percent });
+}
+
 /** How many columns at the start keep the state pure: none resets, measures partway through or adds gate noise. */
 function pureColumnCount(circuit: Circuit): number {
   const partway = partwayMeasurements(circuit);
@@ -117,6 +124,8 @@ export function explainStep(
   const readout = circuit.noise?.readout ?? 0;
   sentences.push(...chanceSentences(column, before, readout, t, language));
   if (kinds.has('M') && readout > 0) sentences.push(t('learn.readoutNoise', { percent: formatPercent(language, readout) }));
+  const noisy = gateNoiseSentence(column, circuit, t, language);
+  if (noisy) sentences.push(noisy);
   // A measurement leaves the shown state as it is on purpose, so "nothing changed" would mislead.
   if (was && is && (!kinds.has('M') || kinds.size > 1)) {
     if (sameState(was, is)) sentences.push(t('learn.unchanged'));
@@ -124,6 +133,7 @@ export function explainStep(
     else sentences.push(...entanglementSentences(was, is, t, language));
   }
   if (was && !is && kinds.has('M')) sentences.push(t('learn.measuredMix'));
+  else if (was && !is && !kinds.has('RESET')) sentences.push(t('learn.noiseMix'));
 
   const show = (state: StateVector | null) => (state ? formatState(state) : t('learn.mixed'));
   return { label: columnLabel(column, t, language), title, sentences, before: show(was), after: show(is) };

@@ -186,6 +186,8 @@
   "learn.chances": "{q} reads 0 {p0} of the time and 1 {p1} of the time.",
   "learn.chancesCertain": "{q} reads {value} every time.",
   "learn.readoutNoise": "These chances include readout errors: each reading comes out wrong {percent} of the time.",
+  "learn.gateNoise": "With noise on, each gate in this step has a {percent} chance of leaving its qubits in a random state, so the Bloch arrows can shrink.",
+  "learn.noiseMix": "The state is now a mix: Qanvas keeps the case with no error and every possible error, each with its chance, so no single ket can describe it.",
   "results.noAmplitudes": "After noise, a measurement partway through or a reset, the state can be a mix of possible outcomes, so there's no single list of amplitudes. The chart shows how likely each outcome is.",
   "results.densityLimit": "Noise, measuring partway through and resetting work with up to {max} qubits in the browser. Remove qubits to see the results.",
   "bloch.hintMixed": "The arrow shows each qubit's state. It shrinks when the qubit is entangled with others, or when noise or a measurement left its value uncertain.",

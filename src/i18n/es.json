@@ -186,6 +186,8 @@
   "learn.chances": "{q} da 0 el {p0} de las veces y 1 el {p1}.",
   "learn.chancesCertain": "{q} siempre da {value}.",
   "learn.readoutNoise": "Estas probabilidades incluyen los errores de lectura: cada lectura sale mal el {percent} de las veces.",
+  "learn.gateNoise": "Con el ruido activado, cada compuerta de este paso tiene un {percent} de probabilidad de dejar sus qubits en un estado aleatorio, por eso las flechas de Bloch pueden encogerse.",
+  "learn.noiseMix": "Ahora el estado es una mezcla: Qanvas guarda el caso sin error y cada error posible, cada uno con su probabilidad, así que ningún ket por sí solo puede describirlo.",
   "results.noAmplitudes": "Después de ruido, de medir a mitad del circuito o de un reinicio, el estado puede ser una mezcla de resultados posibles, así que no hay una sola lista de amplitudes. La gráfica muestra qué tan probable es cada resultado.",
   "results.densityLimit": "El ruido, medir a mitad del circuito y reiniciar qubits funcionan con hasta {max} qubits en el navegador. Quita qubits para ver los resultados.",
   "bloch.hintMixed": "La flecha muestra el estado de cada qubit. Se encoge cuando el qubit está entrelazado con otros o cuando el ruido o una medición dejaron su valor incierto.",
