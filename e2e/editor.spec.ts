@@ -368,6 +368,10 @@ test('adds noise from the toolbar, keeps it in the link and undoes a slider run 
   await page.keyboard.press('ArrowLeft');
   await expect(oneQubit).toHaveValue('9.9');
 
+  await expect(page.getByRole('tab', { name: 'Qiskit', exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'pyQuil no noise' }).click();
+  await expect(page.getByText('This pyQuil code leaves out the noise. Qiskit and Cirq include it.')).toBeVisible();
+
   const describe = (violations: { id: string; nodes: { target: unknown }[] }[]) => violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`);
   expect(describe((await new AxeBuilder({ page }).include('#noise-panel').analyze()).violations)).toEqual([]);
 
@@ -384,6 +388,8 @@ test('adds noise from the toolbar, keeps it in the link and undoes a slider run 
   await expect(page.getByLabel('One-qubit gates')).toHaveValue('9.9');
   await page.getByRole('button', { name: 'Turn noise off' }).click();
   await expect(page.getByText('3 qubits · 1 step', { exact: true })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'pyQuil', exact: true })).toBeVisible();
+  await expect(page.getByText('This pyQuil code leaves out the noise.', { exact: false })).toHaveCount(0);
 });
 
 const nineQubits = `OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[9];\ncreg c[9];\nx q[0];\nmeasure q -> c;`;

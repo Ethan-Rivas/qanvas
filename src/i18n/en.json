@@ -290,6 +290,8 @@
   "code.editHint": "The circuit updates when you pause typing.",
   "code.keptCircuit": "The circuit keeps its last valid version.",
   "code.editInLab": "Editing Qiskit, Cirq and pyQuil code is coming to quantum-lab. For now, you can edit the OpenQASM tab.",
+  "code.noNoiseTag": "no noise",
+  "code.noNoiseNote": "This {language} code leaves out the noise. Qiskit and Cirq include it.",
   "lab.openNotebook": "Open in notebook",
   "lab.sending": "Sending to JupyterLab…",
   "lab.saved": "Saved as {path} in the lab's notebooks folder.",

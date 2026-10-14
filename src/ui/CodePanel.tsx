@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
-import type { Circuit } from '../circuit/model';
+import { hasNoise, type Circuit } from '../circuit/model';
 import { CODE_FORMATS, codeText, generateCode, type CodeFormat, type CodeLine } from '../code/generate';
 import { currentStep, useEditor } from '../editor/store';
 import { useT } from '../i18n/useT';
@@ -8,6 +8,7 @@ import { DownloadDialog } from './DownloadDialog';
 import { CodeEditor } from './CodeEditor';
 
 const FORMAT_KEY = 'qanvas.codeFormat';
+const NOISELESS: readonly CodeFormat[] = ['pyquil', 'qasm'];
 const HEIGHT_KEY = 'qanvas.codeHeight';
 const MIN_HEIGHT = 96;
 const KEY_STEP = 24;
@@ -76,6 +77,7 @@ export function CodePanel() {
   const [format, setFormat] = useState(initialFormat);
   const canEditPython = useLab((s) => s.lab?.features.includes('import') ?? false);
   const canEdit = format === 'qasm' || canEditPython;
+  const noisy = hasNoise(circuit);
   // Code the user wrote stays on its tab until the diagram changes the circuit it built.
   const [typed, setTyped] = useState<{ format: CodeFormat; text: string; circuit: Circuit } | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -232,6 +234,7 @@ export function CodePanel() {
               onKeyDown={onTabKey}
             >
               {t(`code.format.${f}`)}
+              {noisy && NOISELESS.includes(f) && <> <span className="code-tab-tag">{t('code.noNoiseTag')}</span></>}
             </button>
           ))}
         </div>
@@ -257,6 +260,7 @@ export function CodePanel() {
           </button>
         </div>
       </div>
+      {noisy && NOISELESS.includes(format) && <p className="code-noise-note">{t('code.noNoiseNote', { language: t(`code.format.${format}`) })}</p>}
       <div ref={view} id="code-view" role="tabpanel" aria-labelledby={`code-tab-${format}`} tabIndex={0} className="code-view" style={height === null ? undefined : { height, maxHeight: 'none' }}>
         {editing && canEdit ? (
           <CodeEditor key={format} format={format} initial={codeText(lines)} flush={flushEdit} onApplied={(text, applied) => setTyped({ format, text, circuit: applied })} />
