@@ -21,6 +21,11 @@ function load(set: string): ReferenceCase[] {
   return JSON.parse(readFileSync(new URL(`../../reference/data/${set}.json`, import.meta.url), 'utf8'));
 }
 
+function readoutDifference(circuit: Circuit, reported: number[]): number {
+  const p = withReadout(probabilities(finalState(circuit)), circuit.qubits, circuit.noise?.readout ?? 0);
+  return maxDifference({ re: p, im: new Float64Array(p.length) }, { re: reported, im: new Array(p.length).fill(0) });
+}
+
 function maxDifference(actual: { re: ArrayLike<number>; im: ArrayLike<number> }, expected: { re: number[]; im: number[] }): number {
   expect(actual.re.length).toBe(expected.re.length);
   let max = 0;
@@ -31,9 +36,10 @@ function maxDifference(actual: { re: ArrayLike<number>; im: ArrayLike<number> },
 }
 
 describe.each(['single-gate', 'examples', 'random', 'mid-circuit'])('matches Qiskit: %s', (set) => {
-  it.each(load(set))('$name', ({ circuit, state, density }) => {
+  it.each(load(set))('$name', ({ circuit, state, density, probabilities: reported }) => {
     const actual = density ? densityOf(finalState(circuit)) : finalState(circuit);
     expect(maxDifference(actual, (density ?? state)!)).toBeLessThanOrEqual(TOLERANCE);
+    if (reported) expect(readoutDifference(circuit, reported)).toBeLessThanOrEqual(TOLERANCE);
   });
 });
 
@@ -54,9 +60,7 @@ it('has 200 random circuits covering 1 to 12 qubits', () => {
 
 describe('matches Qiskit with noise', () => {
   it.each(load('noise'))('$name', ({ circuit, density, probabilities: reported }) => {
-    const state = finalState(circuit);
-    expect(maxDifference(densityOf(state), density!)).toBeLessThanOrEqual(TOLERANCE);
-    const p = withReadout(probabilities(state), circuit.qubits, circuit.noise?.readout ?? 0);
-    expect(maxDifference({ re: p, im: new Float64Array(p.length) }, { re: reported!, im: new Array(p.length).fill(0) })).toBeLessThanOrEqual(TOLERANCE);
+    expect(maxDifference(densityOf(finalState(circuit)), density!)).toBeLessThanOrEqual(TOLERANCE);
+    expect(readoutDifference(circuit, reported!)).toBeLessThanOrEqual(TOLERANCE);
   });
 });
