@@ -9,5 +9,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // The timing checks in src/sim/performance.test.ts must not share the CPU with other test files.
+    fileParallelism: false,
   },
 });
