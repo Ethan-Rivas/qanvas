@@ -8,7 +8,7 @@
 
 [Leer en español](README.es.md)
 
-![Qanvas showing a GHZ state at step 2: the CNOT column is highlighted, an explanation says q0 and q1 are now entangled, the histogram shows 000 and 110 at 50% each, and the matching Qiskit line is highlighted in the code panel.](docs/images/qanvas-en.png)
+![Qanvas showing quantum teleportation at step 5 with noise on: q0 and q1 are measured partway through, and the X and Z on q2 run only if a measurement gave 1, drawn with double lines. The explanation gives each qubit's chances of reading 0 and 1, readout errors included; the histogram shows each outcome with noise beside a dashed bar without noise; and the pyQuil and OpenQASM tabs are marked as leaving out the noise.](docs/images/qanvas-en.png)
 
 The visual tools students meet first tend to look and feel dated, and the polished ones need an account and a connection. Qanvas is built for students first and researchers second: no account, no install, works offline, in English and Spanish. It's the circuit builder of [quantum-lab](https://github.com/Ethan-Rivas/quantum-lab), and it also runs on its own.
 
