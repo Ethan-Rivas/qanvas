@@ -78,6 +78,7 @@ export function CodePanel() {
   const canEditPython = useLab((s) => s.lab?.features.includes('import') ?? false);
   const canEdit = format === 'qasm' || canEditPython;
   const noisy = hasNoise(circuit);
+  const showNoiseNote = noisy && NOISELESS.includes(format);
   // Code the user wrote stays on its tab until the diagram changes the circuit it built.
   const [typed, setTyped] = useState<{ format: CodeFormat; text: string; circuit: Circuit } | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -260,8 +261,8 @@ export function CodePanel() {
           </button>
         </div>
       </div>
-      {noisy && NOISELESS.includes(format) && <p className="code-noise-note">{t('code.noNoiseNote', { language: t(`code.format.${format}`) })}</p>}
-      <div ref={view} id="code-view" role="tabpanel" aria-labelledby={`code-tab-${format}`} tabIndex={0} className="code-view" style={height === null ? undefined : { height, maxHeight: 'none' }}>
+      {showNoiseNote && <p id="code-noise-note" className="code-noise-note">{t('code.noNoiseNote', { language: t(`code.format.${format}`) })}</p>}
+      <div ref={view} id="code-view" role="tabpanel" aria-labelledby={`code-tab-${format}`} aria-describedby={showNoiseNote ? 'code-noise-note' : undefined} tabIndex={0} className="code-view" style={height === null ? undefined : { height, maxHeight: 'none' }}>
         {editing && canEdit ? (
           <CodeEditor key={format} format={format} initial={codeText(lines)} flush={flushEdit} onApplied={(text, applied) => setTyped({ format, text, circuit: applied })} />
         ) : (

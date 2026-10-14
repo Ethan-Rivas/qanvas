@@ -373,6 +373,7 @@ test('adds noise from the toolbar, keeps it in the link and undoes a slider run 
   await expect(page.getByRole('tab', { name: 'Qiskit', exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'pyQuil no noise' }).click();
   await expect(page.getByText('This pyQuil code leaves out the noise. Qiskit and Cirq include it.')).toBeVisible();
+  await expect(page.getByRole('tabpanel')).toHaveAccessibleDescription('This pyQuil code leaves out the noise. Qiskit and Cirq include it.');
 
   const describe = (violations: { id: string; nodes: { target: unknown }[] }[]) => violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`);
   expect(describe((await new AxeBuilder({ page }).include('#noise-panel').analyze()).violations)).toEqual([]);
